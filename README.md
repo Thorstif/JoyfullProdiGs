@@ -1,0 +1,111 @@
+# JoyfullProdiGs
+
+Design rule: fast in, fast out. Every action is one or two taps, text is short, and the phone should go back in the pocket. The trip comes first.
+
+A crime-city-style companion app for a six-person weekend trip. Players install it on their iPhone home screen, get push notifications for missions, bounties and events, earn Respect and fight for the top of the leaderboard. Thor-Stian is the Game Master and runs everything from the GM panel while also playing.
+
+Original theme and art. No Rockstar names, fonts or assets are used.
+
+## What is in it
+
+| Feature | How it works |
+|---|---|
+| Login | Six invitation codes (e.g. `WOLF-4821`). No passwords. |
+| Respect + ranks | Every player has a Respect score. Leaderboard on the Ranks tab. |
+| Missions | GM creates them, or Autopilot drops random side missions from a pool. Players tap **I did it**, GM approves, Respect is paid. Optional timer and "first N win". |
+| Mystery events | Secret missions only one player can see. Autopilot picks a random player. |
+| World events | GM broadcast to everyone. |
+| Bounties | Any player stakes their own Respect on a challenge, for anyone or a named player. The issuer confirms and pays. GM can overrule. |
+| Achievements | 11 built in (First Job, Hustler, Bounty Hunter, Night Shift, Kingpin, ...) plus custom ones the GM awards. |
+| Double Respect | GM starts a 2x window. Claims made during it pay double. |
+| Daily recap | Push every morning (default 09:00) with yesterday's MVP and standings. |
+| Final standings | GM taps a button, or set a time in Autopilot. Winner gets **Kingpin**. |
+| Scam gag | The first time someone opens the link in a browser they get an absurd fake "you won 1,000,000 Respect" bank e-mail. It has no real input fields and sends nothing. Tapping **Claim** reveals the joke and earns them the secret **Easy Mark** achievement after login. Shown once per device. |
+| Mix-up gag | Two look-alikes (Jens and Ivar) get personal QR cards labeled with each other's name. Scanning greets Jens as "Ivar", the profile glitches, runs a fake investigation ("asking the group chat… 3 say Ivar, 2 say Jens"), then the name scrambles into the right one: "You were handed the right code all along." Earns **Mistaken Identity**. Pick the pair in the GM panel under Gags. |
+| The Crown | One Crown, passed around all weekend. Anyone can crown anyone (not themselves, not the current holder) at any time with a typed reason. Everyone gets a push: who got it, from whom, and why. The holder shows at the top of every screen, with full history and a times-crowned count. Honorary only, no Respect. The GM can also crown someone anonymously as "the city". Final standings name the last holder and the most-crowned player. |
+| Game Master panel | The GM player gets a **GM** button in the header, then enters the PIN. Everyone knows who the GM is; the PIN just stops anyone else using your phone to run it. |
+
+## Stack
+
+Vite + TypeScript (no framework) frontend, Node.js + Express 5 backend, SQLite (better-sqlite3), `web-push` with VAPID keys, `node-cron`. No Firebase, no Apple Developer account.
+
+```
+server/    Express API, game rules, push, scheduler, seed script
+web/       Vite frontend (index.html, src/, public/ with manifest, sw.js, icons)
+data/      SQLite database (created on first run)
+```
+
+## Run it locally
+
+Requires Node.js 22 or newer.
+
+```bash
+npm install
+cp .env.example .env          # set GM_PIN at least
+npm run seed -- "Thor-Stian*" Nikolai Christoffer Simen "Jens~" "Ivar~"   # * = Game Master, ~ = mix-up pair; prints the six codes
+npm run dev                   # API on :3000, app on http://localhost:5173
+```
+
+`npm run seed` with no names prints the existing codes again. `npm run seed -- --reset "Thor-Stian*" ...` wipes the game and makes new codes.
+
+Push notifications need HTTPS (localhost is the exception in desktop browsers), so to test on an iPhone you need the real deployment below.
+
+## Deploy to a VPS with HTTPS
+
+Fastest path (about 10 minutes, no SSH needed): `deploy/setup.sh` installs everything on a fresh Ubuntu 24.04 server (Node 22, Caddy for automatic HTTPS, firewall, a systemd service that restarts on crash or reboot), creates the six players and starts the app.
+
+1. Point the domain's DNS (A record for `@` and `www`) at the server's IP.
+2. On DigitalOcean, create an Ubuntu 24.04 droplet and paste this into **Advanced options > Add initialization scripts (free)**, with your values:
+   ```bash
+   #!/bin/bash
+   export DOMAIN=joyfullprodigs.fun EMAIL=you@yourmail.com GM_PIN=1234 GM_CODE=THOR-1234
+   export REPO=https://github.com/OWNER/REPO.git
+   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/deploy/setup.sh | bash
+   ```
+   (This needs the repo to be public. Nothing secret is in it.)
+3. After a few minutes, `https://joyfullprodigs.fun/api/health` answers `{"ok":true,...}`. Setup output is in `/var/log/cloud-init-output.log` on the server.
+
+Manual alternative on any Ubuntu server: `git clone` the repo, then `sudo DOMAIN=... EMAIL=... REPO=... GM_PIN=... GM_CODE=... bash deploy/setup.sh`.
+
+Backups: the app copies the database every hour to `data/backups/` and keeps 48. To restore: `sudo systemctl stop joyfull`, copy a backup over `data/game.db`, `sudo systemctl start joyfull`.
+
+### Updating during the trip
+
+```bash
+sudo bash /opt/joyfull/deploy/update.sh
+```
+Scores live in `data/game.db` and survive restarts. Back it up with `cp data/game.db ~/game-backup.db`.
+
+## Player onboarding (iPhone)
+
+1. Scan your personal QR card, opens in **Safari** (must be Safari, iOS 16.4+). First the scam gag, then (for Jens and Ivar) the mix-up gag.
+2. Share button, **Add to Home Screen**, Add.
+3. Open **JoyfullProdiGs** from the home screen (not from Safari).
+4. Enter the invitation code. Safari showed it on the install screen.
+5. Tap **Start the story** and allow notifications. A test notification arrives right away.
+
+If a player logged in from Safari first, they just enter the code again in the home-screen app. The same code works on several devices.
+
+## Game Master guide
+
+- Open the panel: tap **GM** in the header and enter `GM_PIN`. Other players never see the button, and the API answers 404 to them.
+- **Autopilot starts itself** at `TRIP_START` (Friday 12:00) with a short GAME ON push, and final standings go out at `FINAL_AT` (Sunday 22:00), which also switches autopilot off. Both are in `.env`, and the GM panel can override them. Without them, turn Autopilot on in the panel. It drops a random side mission every 2.5 to 4 hours between 11:00 and 23:00 local time (about 3 a day), with a 15% chance of a secret mystery event for one random player. All of this is adjustable live.
+- The mission pool starts with 23 generic missions (drinking ones included) that work in any city. Add your own once you know the destination.
+- You get a push whenever someone claims a mission, so you can approve from your pocket.
+- You also play. Your own claims show up in your review list, so be fair (or don't).
+
+## Before departure checklist
+
+- [ ] Deployed with HTTPS and a real `VAPID_SUBJECT` email (Apple rejects some placeholder values)
+- [ ] Every player installed the app and received the test notification
+- [ ] In the GM panel under "Players and invite codes", every row shows Joined ✓ and at least 1 phone
+- [ ] Use **ping** next to each player to check delivery again
+- [ ] Tell everyone Focus modes can hide notifications. Add JoyfullProdiGs to the allowed apps in each Focus mode.
+- [ ] Turn on Autopilot
+
+## Troubleshooting
+
+- **No notifications on iPhone:** the app must be opened from the home screen, not Safari. Check Settings > Notifications > JoyfullProdiGs. In the app, Me tab > Re-enable alerts, then Send me a test alert.
+- **"Sent to 0 phones":** that player has no subscription. Have them open the app and tap Re-enable alerts.
+- **Changed VAPID keys:** all existing subscriptions stop working, and everyone must re-enable alerts. Keys are generated once and stored in the database unless you set them in `.env`, so do not delete `data/game.db` mid-trip.
+- **Times look wrong:** set `TZ` in `.env` to the destination's time zone and restart.
