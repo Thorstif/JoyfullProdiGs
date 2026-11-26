@@ -207,8 +207,7 @@ app.get('/api/missions', (req, res) => {
 });
 
 app.post('/api/missions/:id/claim', async (req, res) => {
-  await game.submitClaim(req.player!.id, int(req.params.id), str(req.body.note));
-  res.json({ ok: true });
+  res.json(await game.submitClaim(req.player!.id, int(req.params.id), str(req.body.note)));
 });
 
 app.get('/api/crown', (_req, res) => {
@@ -277,6 +276,7 @@ gmRouter.get('/state', (_req, res) => {
   settings.scam_gag = getSetting('scam_gag') ?? '1';
   settings.tz = tz();
   settings.auto_approve_min = getSetting('auto_approve_min') || '0';
+  settings.honor_system = getSetting('honor_system') ?? '1';
   settings.crown_cooldown_min = getSetting('crown_cooldown_min') ?? '15';
   res.json({
     players: db
@@ -291,6 +291,13 @@ gmRouter.get('/state', (_req, res) => {
         `SELECT c.id, c.note, c.awarded, c.created_at, p.name player, m.title mission
          FROM claims c JOIN players p ON p.id = c.player_id JOIN missions m ON m.id = c.mission_id
          WHERE c.status = 'pending' ORDER BY c.id`,
+      )
+      .all(),
+    done: db
+      .prepare(
+        `SELECT c.id, c.awarded, c.created_at, p.name player, m.title mission
+         FROM claims c JOIN players p ON p.id = c.player_id JOIN missions m ON m.id = c.mission_id
+         WHERE c.status = 'approved' ORDER BY c.id DESC LIMIT 12`,
       )
       .all(),
     bounties: game.listBounties(),
@@ -343,6 +350,11 @@ gmRouter.post('/missions/:id/veto', async (req, res) => {
 gmRouter.post('/pool/:id/restore', (req, res) => {
   db.prepare('UPDATE mission_pool SET vetoed = 0 WHERE id = ?').run(int(req.params.id));
   res.json({ ok: true });
+});
+
+gmRouter.post('/claims/:id/undo', async (req, res) => {
+  await game.revokeClaim(int(req.params.id));
+  res.json({ ok: true, text: 'Undone. Points taken back.' });
 });
 
 gmRouter.post('/claims/:id', async (req, res) => {
@@ -406,7 +418,7 @@ gmRouter.post('/final', async (_req, res) => res.json({ text: await game.finalSt
 gmRouter.post('/drop', async (_req, res) => res.json({ id: await randomDrop() }));
 
 gmRouter.post('/settings', (req, res) => {
-  const allowed = [...Object.keys(SCHED_DEFAULTS), 'side_max_winners', 'twin_a', 'twin_b', 'scam_gag', 'tz', 'auto_approve_min', 'crown_cooldown_min'];
+  const allowed = [...Object.keys(SCHED_DEFAULTS), 'side_max_winners', 'twin_a', 'twin_b', 'scam_gag', 'tz', 'auto_approve_min', 'crown_cooldown_min', 'honor_system'];
   if (req.body.tz) {
     try {
       new Intl.DateTimeFormat('en-GB', { timeZone: String(req.body.tz) });

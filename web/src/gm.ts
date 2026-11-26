@@ -11,10 +11,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
   const optsSel = (blank: string, cur: string) =>
     `<option value="">${blank}</option>${s.players.map((p: any) => `<option value="${p.id}" ${String(p.id) === String(cur) ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}`;
 
-  v.innerHTML = `
-    <h2 class="gm-title">GAME MASTER</h2>
-
-    <section class="card">
+  const claimsCard = `<section class="card">
       <h3>Claims to review (${s.claims.length})</h3>
       ${
         s.claims
@@ -28,7 +25,25 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
           )
           .join('') || '<p class="muted">All clear.</p>'
       }
-    </section>
+    </section>`;
+
+  v.innerHTML = `
+    <h2 class="gm-title">GAME MASTER</h2>
+
+    ${s.claims.length ? claimsCard : ''}
+
+    <details class="card"${s.claims.length ? '' : ' open'}>
+      <summary>Recently completed</summary>
+      ${
+        s.done
+          .map(
+            (c: any) => `<div class="gm-item row"><span class="grow"><b>${esc(c.player)}</b> · ${esc(c.mission)} <small class="muted">+${c.awarded} · ${ago(c.created_at)}</small></span>
+          <button class="btn small ghost" data-post="/gm/claims/${c.id}/undo" data-confirm="1">Undo</button></div>`,
+          )
+          .join('') || '<p class="muted">Nothing yet.</p>'
+      }
+      <p class="small muted">Players mark jobs done themselves. Undo takes the points back if someone cheated.</p>
+    </details>
 
     ${
       s.bounties.some((b: any) => b.status === 'claimed')
@@ -164,6 +179,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
         <label>Auto final standings at <input name="final_scheduled_at" type="datetime-local" value="${toLocalInput(set.final_scheduled_at)}" /></label>
         ${s.nextDropAt && set.sched_enabled === '1' ? `<p class="small muted">Next random drop around ${new Date(s.nextDropAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>` : ''}
         <label>Time zone <input name="tz" value="${esc(set.tz)}" placeholder="Europe/Oslo" /></label>
+        <label class="check"><input type="checkbox" name="honor_system" ${set.honor_system === '1' ? 'checked' : ''} /> Honor system: Done gives points instantly (off = you approve each claim)</label>
         <label>Auto-approve claims after (min, 0 = off) <input name="auto_approve_min" type="number" min="0" value="${esc(set.auto_approve_min)}" class="num" /></label>
         <label>Crown cooldown per person (min) <input name="crown_cooldown_min" type="number" min="0" value="${esc(set.crown_cooldown_min)}" class="num" /></label>
         <button class="btn primary">Save</button>
@@ -305,7 +321,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       const body: Record<string, unknown> = {};
       f.querySelectorAll<HTMLInputElement>('input, select, textarea').forEach((el) => {
         if (!el.name) return;
-        if (el.type === 'checkbox') body[el.name] = el.name.startsWith('sched_') || el.name.startsWith('recap_') || el.name.startsWith('scam_') ? (el.checked ? '1' : '0') : el.checked;
+        if (el.type === 'checkbox') body[el.name] = el.name.startsWith('sched_') || el.name.startsWith('recap_') || el.name.startsWith('scam_') || el.name.startsWith('honor_') ? (el.checked ? '1' : '0') : el.checked;
         else if (el.type === 'datetime-local') body[el.name] = el.value ? new Date(el.value).toISOString() : '';
         else body[el.name] = el.value;
       });

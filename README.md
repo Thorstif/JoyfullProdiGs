@@ -12,7 +12,7 @@ Original theme and art. No Rockstar names, fonts or assets are used.
 |---|---|
 | Login | Six invitation codes (e.g. `WOLF-4821`). No passwords. |
 | Respect + ranks | Every player has a Respect score. Leaderboard on the Ranks tab. |
-| Missions | GM creates them, or Autopilot drops random side missions from a pool. Players tap **I did it**, GM approves, Respect is paid. Optional timer and "first N win". |
+| Missions | GM creates them, or Autopilot drops random side missions from a pool. Players tap **Done ✓** and Respect lands instantly (honor system); it shows in News so the group can call out cheaters, and the GM can **Undo** any completion. Switch "Honor system" off in GM settings to approve each claim yourself. Optional timer and "first N win". |
 | Mystery events | Secret missions only one player can see. Autopilot picks a random player. |
 | World events | GM broadcast to everyone. |
 | Bounties | Any player stakes their own Respect on a challenge, for anyone or a named player. The issuer confirms and pays. GM can overrule. |
@@ -98,8 +98,7 @@ If a player logged in from Safari first, they just enter the code again in the h
 - Open the panel: tap **GM** in the header and enter `GM_PIN`. Other players never see the button, and the API answers 404 to them.
 - **Autopilot starts itself** at `TRIP_START` (Friday 12:00) with a short GAME ON push, and final standings go out at `FINAL_AT` (Sunday 22:00), which also switches autopilot off. Both are in `.env`, and the GM panel can override them. Without them, turn Autopilot on in the panel. It drops a random side mission every 2.5 to 4 hours between 11:00 and 23:00 local time (about 3 a day), with a 15% chance of a secret mystery event for one random player. All of this is adjustable live.
 - The mission pool starts with 23 generic missions (drinking ones included) that work in any city. Add your own once you know the destination.
-- You get a push whenever someone claims a mission, so you can approve from your pocket.
-- You also play. Your own claims show up in your review list, so be fair (or don't).
+- Missions run on the honor system, so you get no claim alerts. If someone cheated, GM panel → "Recently completed" → **Undo** (tap twice) takes the points back and reopens the slot.
 
 ## Before departure checklist
 

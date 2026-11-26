@@ -277,8 +277,8 @@ function bindClaims(root: HTMLElement) {
     f.onsubmit = async (e) => {
       e.preventDefault();
       try {
-        await api(`/missions/${f.dataset.id}/claim`, { body: { note: new FormData(f).get('note') } });
-        toast('Sent for review.');
+        const r = await api<{ status: string; awarded: number }>(`/missions/${f.dataset.id}/claim`, { body: { note: new FormData(f).get('note') } });
+        toast(r?.status === 'approved' ? `+${r.awarded} Respect` : 'Sent for review.');
         route();
       } catch (err: any) {
         toast(err.message);

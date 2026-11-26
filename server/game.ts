@@ -188,15 +188,21 @@ export async function submitClaim(playerId: number, missionId: number, note: str
   if (!missionOpen(m)) throw new Error('Mission is closed');
   // Reward locked in at claim time, so Double Respect counts if you did it during the window.
   const amount = m.reward * multiplier();
-  db.prepare('INSERT INTO claims (mission_id, player_id, note, awarded) VALUES (?, ?, ?, ?)').run(missionId, playerId, note, amount);
+  const res = db.prepare('INSERT INTO claims (mission_id, player_id, note, awarded) VALUES (?, ?, ?, ?)').run(missionId, playerId, note, amount);
+  // Honor system (default): points land right away, the feed shows it, the GM can undo
+  if ((getSetting('honor_system') ?? '1') === '1') {
+    await reviewClaim(Number(res.lastInsertRowid), true, null, true);
+    return { status: 'approved', awarded: amount };
+  }
   const p = getPlayer(playerId)!;
   const gms = db.prepare('SELECT id FROM players WHERE is_gm = 1').all() as { id: number }[];
   for (const gm of gms) {
     await pushToPlayer(gm.id, { title: 'GM: claim to review', body: `${p.name}: ${m.title}`, url: '/#/gm', tag: 'gm-claims' });
   }
+  return { status: 'pending', awarded: amount };
 }
 
-export async function reviewClaim(claimId: number, approve: boolean, reviewerId: number | null = null) {
+export async function reviewClaim(claimId: number, approve: boolean, reviewerId: number | null = null, honor = false) {
   const c = db.prepare('SELECT * FROM claims WHERE id = ?').get(claimId) as
     | { id: number; mission_id: number; player_id: number; status: string; awarded: number; created_at: string }
     | undefined;
@@ -209,9 +215,10 @@ export async function reviewClaim(claimId: number, approve: boolean, reviewerId:
     return;
   }
   await addRespect(p.id, c.awarded, `Mission: ${m.title}`);
-  const self = reviewerId === p.id ? ' (approved own claim)' : reviewerId === null ? ' (auto-approved)' : '';
+  const self = honor ? '' : reviewerId === p.id ? ' (approved own claim)' : reviewerId === null ? ' (auto-approved)' : '';
   postFeed('passed', `${p.name} completed "${m.title}" (+${c.awarded})${self}.`);
-  await pushToPlayer(p.id, { title: 'MISSION COMPLETE', body: `+${c.awarded} · ${m.title}`, url: '/#/' });
+  // they just tapped Done themselves, so no push needed in honor mode
+  if (!honor) await pushToPlayer(p.id, { title: 'MISSION COMPLETE', body: `+${c.awarded} · ${m.title}`, url: '/#/' });
   if (c.awarded > m.reward) await grantAchievement(p.id, 'double_trouble');
   const claimedAt = new Date(c.created_at);
   const h = localHour(claimedAt);
@@ -220,6 +227,24 @@ export async function reviewClaim(claimId: number, approve: boolean, reviewerId:
     const n = (db.prepare("SELECT COUNT(*) n FROM claims WHERE mission_id = ? AND status = 'approved'").get(m.id) as { n: number }).n;
     if (n >= m.max_winners) db.prepare('UPDATE missions SET closed = 1 WHERE id = ?').run(m.id);
   }
+}
+
+// GM undo of a completed mission: takes the Respect back and reopens the slot
+export async function revokeClaim(claimId: number) {
+  const c = db.prepare('SELECT * FROM claims WHERE id = ?').get(claimId) as
+    | { id: number; mission_id: number; player_id: number; status: string; awarded: number }
+    | undefined;
+  if (!c || c.status !== 'approved') throw new Error('Nothing to undo');
+  const m = db.prepare('SELECT * FROM missions WHERE id = ?').get(c.mission_id) as Mission;
+  const p = getPlayer(c.player_id)!;
+  db.prepare("UPDATE claims SET status = 'revoked' WHERE id = ?").run(claimId);
+  await addRespect(p.id, -c.awarded, `Undone by GM: ${m.title}`);
+  if (m.max_winners > 0 && m.closed) {
+    const n = (db.prepare("SELECT COUNT(*) n FROM claims WHERE mission_id = ? AND status = 'approved'").get(m.id) as { n: number }).n;
+    if (n < m.max_winners) db.prepare('UPDATE missions SET closed = 0 WHERE id = ?').run(m.id);
+  }
+  postFeed('gm', `GM undid ${p.name}'s "${m.title}" (-${c.awarded}).`);
+  await pushToPlayer(p.id, { title: 'MISSION UNDONE', body: `-${c.awarded} · ${m.title}`, url: '/#/feed' });
 }
 
 // ---------- bounties ----------
