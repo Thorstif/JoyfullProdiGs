@@ -27,6 +27,7 @@ ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw --force enable
 
 # Code
 git config --global --add safe.directory "$APP"
+git config --system --add safe.directory "$APP"  # also for root under systemd (no HOME there)
 if [ -d "$APP/.git" ]; then git -C "$APP" pull --ff-only; else git clone "$REPO" "$APP"; fi
 cd "$APP"
 npm ci
@@ -89,6 +90,7 @@ Description=JoyfullProdiGs auto-update
 
 [Service]
 Type=oneshot
+Environment=HOME=/root
 ExecStart=/bin/bash $APP/deploy/autoupdate.sh
 UNIT
 cat > /etc/systemd/system/joyfull-update.timer <<UNIT
