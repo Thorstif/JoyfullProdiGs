@@ -59,13 +59,15 @@ Fastest path (about 10 minutes, no SSH needed): `deploy/setup.sh` installs every
    ```bash
    #!/bin/bash
    export DOMAIN=joyfullprodigs.fun EMAIL=you@yourmail.com GM_PIN=1234 GM_CODE=THOR-1234
-   export REPO=https://github.com/OWNER/REPO.git
-   curl -fsSL https://raw.githubusercontent.com/OWNER/REPO/main/deploy/setup.sh | bash
+   export REPO=https://github.com/Thorstif/JoyfullProdiGs.git
+   curl -fsSL https://raw.githubusercontent.com/Thorstif/JoyfullProdiGs/main/deploy/setup.sh | bash
    ```
    (This needs the repo to be public. Nothing secret is in it.)
 3. After a few minutes, `https://joyfullprodigs.fun/api/health` answers `{"ok":true,...}`. Setup output is in `/var/log/cloud-init-output.log` on the server.
 
 Manual alternative on any Ubuntu server: `git clone` the repo, then `sudo DOMAIN=... EMAIL=... REPO=... GM_PIN=... GM_CODE=... bash deploy/setup.sh`.
+
+Auto-deploy: the server checks GitHub `main` every 5 minutes. New commits are pulled, built and restarted automatically, and rolled back if the health check fails. Log: `journalctl -u joyfull-update`.
 
 Backups: the app copies the database every hour to `data/backups/` and keeps 48. To restore: `sudo systemctl stop joyfull`, copy a backup over `data/game.db`, `sudo systemctl start joyfull`.
 

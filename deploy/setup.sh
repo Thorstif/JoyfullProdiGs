@@ -81,4 +81,27 @@ $DOMAIN, www.$DOMAIN {
 CADDY
 systemctl reload caddy || systemctl restart caddy
 
+# Auto-deploy: check GitHub every 5 minutes, update and restart when main changes (rolls back if unhealthy)
+cat > /etc/systemd/system/joyfull-update.service <<UNIT
+[Unit]
+Description=JoyfullProdiGs auto-update
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash $APP/deploy/autoupdate.sh
+UNIT
+cat > /etc/systemd/system/joyfull-update.timer <<UNIT
+[Unit]
+Description=Check GitHub for JoyfullProdiGs updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now joyfull-update.timer
+
 echo "Done. Open https://$DOMAIN (certificate appears within a minute of DNS pointing here)."
