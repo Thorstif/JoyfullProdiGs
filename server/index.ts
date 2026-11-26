@@ -75,8 +75,17 @@ function loginGuard(req: Request, res: Response, next: NextFunction) {
 // For an uptime monitor (e.g. UptimeRobot): 200 when the server and database answer
 app.get('/api/health', (_req, res) => {
   const n = (db.prepare('SELECT COUNT(*) n FROM players').get() as { n: number }).n;
-  res.json({ ok: true, players: n, time: new Date().toISOString() });
+  res.json({ ok: true, players: n, time: new Date().toISOString(), backup: backupUrl() || undefined });
 });
+
+// Backup address written by deploy/ensure-caddy.sh (e.g. https://1-2-3-4.sslip.io), for when a carrier blocks the main domain
+function backupUrl() {
+  try {
+    return fs.readFileSync(path.join(config.dataDir, 'backup-url'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+}
 
 app.get('/api/config', (_req, res) => {
   res.json({ appName: config.appName, vapidPublicKey, scamGag: (getSetting('scam_gag') ?? '1') === '1', resetEpoch: getSetting('reset_epoch') || '' });
@@ -314,6 +323,7 @@ gmRouter.get('/state', (_req, res) => {
     nextDropAt: getSetting('next_drop_at') || null,
     tripStarted: getSetting('trip_started') || null,
     baseUrl: `${_req.protocol}://${_req.get('host')}`,
+    backupUrl: backupUrl(),
     doubleUntil: game.doubleRespectUntil(),
     finalAt: getSetting('final_at') || null,
   });

@@ -80,6 +80,7 @@ $DOMAIN, www.$DOMAIN {
 }
 CADDY
 systemctl reload caddy || systemctl restart caddy
+bash $APP/deploy/ensure-caddy.sh || true  # adds the <ip>.sslip.io backup address
 
 # Auto-deploy: check GitHub every 5 minutes, update and restart when main changes (rolls back if unhealthy)
 cat > /etc/systemd/system/joyfull-update.service <<UNIT

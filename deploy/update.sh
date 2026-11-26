@@ -8,4 +8,5 @@ sudo -u www-data git reset -q --hard origin/main
 sudo -u www-data npm ci
 sudo -u www-data npm run build
 systemctl restart joyfull
+bash deploy/ensure-caddy.sh || true
 echo "Updated."

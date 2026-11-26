@@ -259,6 +259,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       </table>
       <p class="small muted">"sign out" logs them out on every phone and removes their alerts, same code. Use it after testing as someone else.</p>
       <p class="small muted">"tag" sets the wrong names their nametag now and then slips to.</p>
+      ${s.backupUrl ? `<p class="small">Main address blocked on someone's phone (carrier filter)? Same app, same codes: <button class="link" data-copy="${esc(s.backupUrl)}">${esc(s.backupUrl.replace('https://', ''))}</button> (tap to copy). Open the GM panel there and "link" copies invites for that address.</p>` : ''}
       <p class="small muted">⚠ 0 phones = no alerts reach them. "link" copies their personal invite to paste in a chat if a card is lost. "new code" if a card leaks: old code and phones stop working.</p>
       <button class="btn small ghost" data-post="/gm/backup">Back up now</button>
     </details>
