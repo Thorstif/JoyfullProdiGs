@@ -3,7 +3,7 @@ import './style.css';
 import { api, ApiError, store } from './api.ts';
 import { renderGm } from './gm.ts';
 import { twinScreen, twinSeen } from './twin.ts';
-import { gagScreen, gagSeen, fellForGag, clearFell } from './gag.ts';
+import { gagSeen, fellForGag, clearFell } from './gag.ts';
 import { esc, ago, $, toast, timeLeft, banner } from './ui.ts';
 
 type Me = {
@@ -547,7 +547,7 @@ function gmPinForm(v: HTMLElement, error = '') {
   v.innerHTML = `
     <h2>Game Master</h2>
     <form id="pin" class="card stack">
-      <input name="pin" type="password" inputmode="numeric" placeholder="PIN" autocomplete="off" />
+      <input name="pin" type="tel" inputmode="numeric" class="masked" placeholder="PIN" autocomplete="off" />
       <button class="btn primary">Unlock</button>
       <p class="error">${esc(error)}</p>
     </form>`;
@@ -652,8 +652,13 @@ async function boot(): Promise<void> {
       install();
     };
     // First gag: the fake scam e-mail, once per device, only in the browser
-    const scamOn = intro ? intro.scamGag : cfg.scamGag;
-    if (scamOn && !isStandalone && !gagSeen()) return gagScreen(app, twin, intro ? () => report('scam') : undefined);
+    // Only for someone who arrived with a valid personal invite, and loaded on demand
+    if (intro?.scamGag && !isStandalone && !gagSeen()) {
+      try {
+        const { gagScreen } = await import('./gagscreen.ts');
+        return gagScreen(app, twin, () => report('scam'));
+      } catch {}
+    }
     return twin();
   }
   try {

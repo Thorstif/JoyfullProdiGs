@@ -148,7 +148,7 @@ app.post('/api/intro/:code/gag', loginGuard, async (req, res) => {
     return void res.status(404).json({ error: 'Unknown invite' });
   }
   if (req.body.gag === 'scam') {
-    await game.grantAchievement(p.id, 'easy_mark', 'Easy Mark', 'Tried to claim 1,000,000 Respect from a very real bank.');
+    await game.grantAchievement(p.id, 'easy_mark', 'Easy Mark', 'Gave a snack to a made-up prince.');
   } else if (req.body.gag === 'twin') {
     const twin = twinOf(p.id);
     if (twin) await game.grantAchievement(p.id, 'mistaken_identity', 'Mistaken Identity', `Was welcomed as ${twin.name}. Again.`);
@@ -217,7 +217,7 @@ app.post('/api/push/test', async (req, res) => {
 
 // The first-open scam gag: players who clicked "claim" earn a joke achievement
 app.post('/api/gag', async (req, res) => {
-  await game.grantAchievement(req.player!.id, 'easy_mark', 'Easy Mark', 'Tried to claim 1,000,000 Respect from a very real bank.');
+  await game.grantAchievement(req.player!.id, 'easy_mark', 'Easy Mark', 'Gave a snack to a made-up prince.');
   res.json({ ok: true });
 });
 
