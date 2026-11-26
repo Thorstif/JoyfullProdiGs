@@ -81,7 +81,7 @@ Scores live in `data/game.db` and survive restarts. Back it up with `cp data/gam
 
 ## Player onboarding (iPhone)
 
-1. Scan your personal QR card, opens in **Safari** (must be Safari, iOS 16.4+). First the scam gag, then (for Jens and Ivar) the mix-up gag.
+1. Scan your personal QR card. It opens in your default browser. If that isn't Safari (Brave, Chrome, Firefox, in-app browsers), the install screen shows **Open in Safari** and **Copy link**; the Safari link skips the gags you already saw. First the scam gag, then (for Jens and Ivar) the mix-up gag.
 2. Share button, **Add to Home Screen**, Add.
 3. Open **JoyfullProdiGs** from the home screen (not from Safari).
 4. Enter the invitation code. Safari showed it on the install screen.

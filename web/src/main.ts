@@ -36,6 +36,13 @@ function takeInviteFromUrl() {
     try {
       localStorage.setItem(INVITE_KEY, code);
     } catch {}
+    // seen=1: reopened in Safari from another browser, where the gags already played
+    if (params.get('seen') === '1') {
+      try {
+        localStorage.setItem('ww_gag_seen', '1');
+        localStorage.setItem('ww_twin_seen', '1');
+      } catch {}
+    }
     history.replaceState(null, '', location.pathname + location.hash); // keep the code out of the address bar
   }
   try {
@@ -49,6 +56,8 @@ let lastRespect: number | null = null;
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+// Brave on iOS hides behind a Safari user agent, so also check navigator.brave
+const notSafari = isIOS && (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo|YaBrowser|FBAN|FBAV|Instagram|Line\/|Snapchat/.test(navigator.userAgent) || !!(navigator as any).brave);
 const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
 // ---------- push ----------
@@ -78,21 +87,44 @@ async function enablePush() {
 
 // ---------- screens without the tab bar ----------
 
+// Personal link for reopening in Safari (seen=1 so the gags don't replay there)
+function shareUrl() {
+  const code = intro?.code || (() => { try { return localStorage.getItem(INVITE_KEY) || ''; } catch { return ''; } })();
+  return `${location.origin}/${code ? `?invite=${encodeURIComponent(code)}&seen=1` : ''}`;
+}
+// x-safari-https:// opens Safari directly on iOS 17+; older iOS ignores it, so Copy link is the fallback
+const safariUrl = () => shareUrl().replace(/^https:/, 'x-safari-https:').replace(/^http:/, 'x-safari-http:');
+
 function installScreen() {
   app.innerHTML = `
     <div class="splash">
       <div class="logo big">${logoText()}</div>
       <p class="lead">Add the app to your home screen. That's how your iPhone gets alerts.</p>
+      ${
+        notSafari
+          ? `<div class="card safari-card"><b>Open this in Safari first.</b><small>Other browsers often can't add it to the home screen properly.</small>
+             <div class="row"><a class="btn primary small" href="${esc(safariUrl())}">Open in Safari</a><button class="btn small ghost" id="copy-link">Copy link</button></div></div>`
+          : ''
+      }
       <ol class="steps">
         <li>Tap the <b>Share</b> button <span class="share-ico">⬆︎</span> at the bottom of Safari.</li>
         <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
         <li>Tap <b>Add</b>, then open <b>JoyfullProdiGs</b> from your home screen.</li>
       </ol>
       ${intro ? `<div class="card code-card"><small>Card for <b>${esc(intro.name)}</b>. Not you? Swap cards. Your code:</small><b>${esc(intro.code)}</b><small>You'll type this once after opening it from the home screen.</small></div>` : ''}
-      <p class="small muted">Needs iOS 16.4 or newer, and it must be Safari.</p>
+      ${notSafari ? '' : `<p class="small muted">Needs iOS 16.4 or newer. Not in Safari? <a href="${esc(safariUrl())}">Open in Safari</a> · <button class="link" id="copy-link">copy link</button></p>`}
       <button class="link" id="skip">Continue in the browser anyway</button>
     </div>`;
   $('#skip')!.onclick = () => loginScreen();
+  $('#copy-link')!.onclick = async () => {
+    const url = shareUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link copied. Paste it in Safari.');
+    } catch {
+      toast(url);
+    }
+  };
 }
 
 function loginScreen() {
