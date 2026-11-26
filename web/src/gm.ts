@@ -197,7 +197,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       <summary>Gags</summary>
       <form class="stack" data-api="/gm/settings">
         <label class="check"><input type="checkbox" name="scam_gag" ${set.scam_gag !== '0' ? 'checked' : ''} /> Fake scam e-mail on first open</label>
-        <p class="small muted">Mistaken identity: these two get QR cards labeled with each other's name. Scanning greets them as the other guy, then the app corrects itself.</p>
+        <p class="small muted">Mistaken identity: when these two scan their card, the app greets them as the other guy, then corrects itself.</p>
         <div class="row">
           <select name="twin_a">${optsSel('Nobody', set.twin_a)}</select>
           <select name="twin_b">${optsSel('Nobody', set.twin_b)}</select>
@@ -301,7 +301,7 @@ function toLocalInput(iso: string) {
 }
 
 // Full-screen printable sheet of QR cards. SVGs come from our own server (qrcode library).
-function showQrSheet(cards: { name: string; label: string; swapped: boolean; url: string; svg: string }[]) {
+function showQrSheet(cards: { name: string; url: string; svg: string }[]) {
   const el = document.createElement('div');
   el.className = 'qr-sheet';
   el.innerHTML = `
@@ -310,19 +310,15 @@ function showQrSheet(cards: { name: string; label: string; swapped: boolean; url
       ${cards
         .map(
           (c) => `<div class="qr-card">
-          <div class="qr-title">JoyfullProdiGs</div><div class="qr-owner">${esc(c.name.charAt(0).toLowerCase())}</div>
+          <div class="qr-title">JoyfullProdiGs</div>
           <div class="qr-svg">${c.svg}</div>
-          <div class="qr-name">${esc(c.label)}</div>
-          <div class="qr-fine">${c.swapped ? 'Personal invitation. Definitely the right one.' : 'Personal invitation. Do not share.'}</div>
+          <div class="qr-name">${esc(c.name)}</div>
+          <div class="qr-fine">Personal invitation. Scan with the iPhone camera.</div>
         </div>`,
         )
         .join('')}
     </div>
-    <p class="small qr-note">${
-      cards.some((c) => c.swapped)
-        ? 'Hand-out guide (not printed): ' + cards.filter((c) => c.swapped).map((c) => `give the card that says <b>${esc(c.label)}</b> to <b>${esc(c.name)}</b>`).join(', and ') + '. The tiny letter in the corner of each card is the real owner\'s initial.'
-        : 'Give each card to the player named on it.'
-    }</p>`;
+    <p class="small qr-note">Give each card to the player named on it. The Jens and Ivar mix-up happens inside the app.</p>`;
   document.body.appendChild(el);
   el.querySelector<HTMLElement>('#qr-close')!.onclick = () => el.remove();
   el.querySelector<HTMLElement>('#qr-print')!.onclick = () => window.print();

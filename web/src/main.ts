@@ -86,7 +86,7 @@ function installScreen() {
         <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
         <li>Tap <b>Add</b>, then open <b>JoyfullProdiGs</b> from your home screen.</li>
       </ol>
-      ${intro ? `<div class="card code-card"><small>Your code for the app</small><b>${esc(intro.code)}</b><small>You'll type this once after opening it from the home screen.</small></div>` : ''}
+      ${intro ? `<div class="card code-card"><small>Card for <b>${esc(intro.name)}</b>. Not you? Swap cards. Your code:</small><b>${esc(intro.code)}</b><small>You'll type this once after opening it from the home screen.</small></div>` : ''}
       <p class="small muted">Needs iOS 16.4 or newer, and it must be Safari.</p>
       <button class="link" id="skip">Continue in the browser anyway</button>
     </div>`;
@@ -586,7 +586,17 @@ async function boot(): Promise<void> {
     const twin = () => {
       if (intro?.decoy && !isStandalone && !twinSeen()) {
         report('twin');
-        return twinScreen(app, intro.name, intro.decoy.name, install);
+        return twinScreen(app, intro.name, intro.decoy.name, install, async () => {
+          // swapped cards: switch to the other twin's invite, then carry on
+          const other = await api<Intro>(`/intro/${encodeURIComponent(intro!.code)}/twin`, { body: {} }).catch(() => null);
+          if (!other) return install();
+          intro = other;
+          try {
+            localStorage.setItem(INVITE_KEY, other.code);
+          } catch {}
+          report('twin');
+          setTimeout(install, 1200);
+        });
       }
       install();
     };

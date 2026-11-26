@@ -118,6 +118,17 @@ app.get('/api/intro/:code', loginGuard, (req, res) => {
   });
 });
 
+// Safety net for the look-alikes: "Actually, I'm the other one" switches to the twin's invite
+app.post('/api/intro/:code/twin', loginGuard, (req, res) => {
+  const p = playerByCode(req.params.code);
+  const twin = p ? twinOf(p.id) : null;
+  if (!p || !twin) {
+    noteFailedCode(req);
+    return void res.status(404).json({ error: 'Unknown invite' });
+  }
+  res.json({ name: twin.name, code: twin.code, scamGag: (getSetting('scam_gag') ?? '1') === '1', decoy: { name: p.name } });
+});
+
 // Gag results are reported with the invite code, because on iPhone the home-screen app
 // does not share storage with Safari, where the gags play.
 app.post('/api/intro/:code/gag', loginGuard, async (req, res) => {
@@ -436,7 +447,7 @@ gmRouter.get('/qr', async (req, res) => {
     const url = `${base}/?invite=${encodeURIComponent(p.code)}`;
     const twin = twinOf(p.id);
     const svg = await QRCode.toString(url, { type: 'svg', margin: 1, color: { dark: '#000000', light: '#ffffff' } });
-    cards.push({ id: p.id, name: p.name, label: twin ? twin.name : p.name, swapped: !!twin, url, svg });
+    cards.push({ id: p.id, name: p.name, url, svg }); // own name on every card: swaps can't break anything
   }
   res.json(cards);
 });

@@ -31,7 +31,7 @@ async function scramble(el: HTMLElement, from: string, to: string) {
   el.textContent = to;
 }
 
-export function twinScreen(app: HTMLElement, realName: string, decoyName: string, done: () => void) {
+export function twinScreen(app: HTMLElement, realName: string, decoyName: string, done: () => void, imTheOther?: () => void) {
   try {
     localStorage.setItem(SEEN, '1');
   } catch {}
@@ -55,6 +55,7 @@ export function twinScreen(app: HTMLElement, realName: string, decoyName: string
       <pre class="twin-log" id="twin-log"></pre>
       <p class="lead" id="twin-final" hidden></p>
       <button class="btn primary" id="twin-go" hidden>That's me (I think)</button>
+      <button class="link" id="twin-other" hidden>Actually, I'm ${decoy}</button>
     </div>`;
 
   const run = async () => {
@@ -89,11 +90,17 @@ export function twinScreen(app: HTMLElement, realName: string, decoyName: string
     bar.style.width = '100%';
     $('#twin-loadtxt')!.textContent = 'Profile corrected.';
     $('#twin-alert')!.hidden = true;
-    const fin = $('#twin-final')!;
     fin.innerHTML = `Sorry about that, <b>${real}</b>. Happens to everyone. Mostly to you two.`;
     fin.hidden = false;
     $('#twin-go')!.hidden = false;
+    if (imTheOther) $('#twin-other')!.hidden = false;
   };
+  // Cards got swapped after all? One tap fixes it.
+  $('#twin-other')!.onclick = () => {
+    fin.innerHTML = `Of course you are. Nobody can tell you apart.`;
+    imTheOther?.();
+  };
+  const fin = $('#twin-final')!;
   $('#twin-go')!.onclick = done;
   run();
 }
