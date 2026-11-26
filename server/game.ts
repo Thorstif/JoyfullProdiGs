@@ -442,7 +442,7 @@ export async function startGame() {
 export function resetGame() {
   db.transaction(() => {
     for (const t of ['claims', 'bounties', 'achievements', 'respect_log', 'feed', 'crown_log', 'missions']) db.exec(`DELETE FROM ${t}`);
-    db.exec('UPDATE players SET respect = 0');
+    db.exec('UPDATE players SET respect = 0, last_seen = NULL');
     db.exec('UPDATE mission_pool SET used = 0');
     db.prepare("DELETE FROM settings WHERE key IN ('trip_started', 'double_until', 'final_at', 'next_drop_at')").run();
     setSetting('sched_enabled', '0');

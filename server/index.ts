@@ -507,7 +507,11 @@ gmRouter.post('/players/:id', (req, res) => {
   const name = str(req.body.name, 40);
   if (name) db.prepare('UPDATE players SET name = ? WHERE id = ?').run(name, int(req.params.id));
   if ('aliases' in req.body) db.prepare('UPDATE players SET aliases = ? WHERE id = ?').run(JSON.stringify(parseAliases(req.body.aliases)), int(req.params.id));
-  if (req.body.resetLogin) db.prepare('UPDATE players SET token = NULL WHERE id = ?').run(int(req.params.id));
+  if (req.body.resetLogin) {
+    // sign out everywhere and drop their phones' alerts, but keep the same code (printed cards stay valid)
+    db.prepare('UPDATE players SET token = NULL, last_seen = NULL WHERE id = ?').run(int(req.params.id));
+    db.prepare('DELETE FROM push_subs WHERE player_id = ?').run(int(req.params.id));
+  }
   res.json({ ok: true });
 });
 

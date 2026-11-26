@@ -252,10 +252,12 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
             <td class="acts"><button class="link" data-post="/gm/test-push" data-body='{"playerId":${p.id}}'>ping</button>
             <button class="link" data-copy="${esc(s.baseUrl)}/?invite=${encodeURIComponent(p.code)}">link</button>
             <button class="link" data-post="/gm/players/${p.id}/reissue" data-confirm="1">new code</button>
+            <button class="link" data-post="/gm/players/${p.id}" data-body='{"resetLogin":true}' data-confirm="1">sign out</button>
             <button class="link" data-aliases="${p.id}" data-name="${esc(p.name)}" data-cur="${esc(aliasList(p.aliases).join(', '))}">tag</button></td></tr>`,
           )
           .join('')}
       </table>
+      <p class="small muted">"sign out" logs them out on every phone and removes their alerts, same code. Use it after testing as someone else.</p>
       <p class="small muted">"tag" sets the wrong names their nametag now and then slips to.</p>
       <p class="small muted">⚠ 0 phones = no alerts reach them. "link" copies their personal invite to paste in a chat if a card is lost. "new code" if a card leaks: old code and phones stop working.</p>
       <button class="btn small ghost" data-post="/gm/backup">Back up now</button>
