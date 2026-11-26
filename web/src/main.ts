@@ -24,7 +24,7 @@ type Me = {
 };
 
 const app = document.getElementById('app')!;
-let cfg = { appName: 'JoyfullProdiGs', vapidPublicKey: '', scamGag: true, resetEpoch: '' };
+let cfg = { appName: 'JoyfullProdiGs', vapidPublicKey: '', scamGag: true, resetEpoch: '', forwardTo: '' };
 type Intro = { name: string; code: string; scamGag: boolean; decoy: { name: string } | null };
 let intro: Intro | null = null; // set when the app was opened from a personal QR (/?invite=CODE)
 
@@ -623,6 +623,18 @@ async function boot(): Promise<void> {
     cfg = await api('/config');
   } catch {}
   document.title = cfg.appName;
+  // GM switched on "forward to backup address" (main domain blocked on some phones): send browser visitors
+  // there with their invite code, so they install from the address that works. Installed apps stay put.
+  if (cfg.forwardTo && !isStandalone) {
+    try {
+      const target = new URL(cfg.forwardTo);
+      if (target.host !== location.host) {
+        const code = new URLSearchParams(location.search).get('invite') || (() => { try { return localStorage.getItem(INVITE_KEY) || ''; } catch { return ''; } })();
+        location.replace(`${target.origin}/${code ? `?invite=${encodeURIComponent(code)}` : ''}${location.hash}`);
+        return;
+      }
+    } catch {}
+  }
   applyReset(cfg.resetEpoch);
   if (!store.token) {
     const invite = takeInviteFromUrl();

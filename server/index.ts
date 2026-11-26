@@ -75,20 +75,30 @@ function loginGuard(req: Request, res: Response, next: NextFunction) {
 // For an uptime monitor (e.g. UptimeRobot): 200 when the server and database answer
 app.get('/api/health', (_req, res) => {
   const n = (db.prepare('SELECT COUNT(*) n FROM players').get() as { n: number }).n;
-  res.json({ ok: true, players: n, time: new Date().toISOString(), backup: backupUrl() || undefined });
+  res.json({ ok: true, players: n, time: new Date().toISOString(), backup: backupUrl() || undefined, spares: backupUrls(), forwardTo: forwardTo() || undefined });
 });
 
 // Backup address written by deploy/ensure-caddy.sh (e.g. https://1-2-3-4.sslip.io), for when a carrier blocks the main domain
 function backupUrl() {
-  try {
-    return fs.readFileSync(path.join(config.dataDir, 'backup-url'), 'utf8').trim();
-  } catch {
-    return '';
+  return backupUrls()[0] || '';
+}
+function backupUrls(): string[] {
+  for (const f of ['backup-urls', 'backup-url']) {
+    try {
+      const list = fs.readFileSync(path.join(config.dataDir, f), 'utf8').split('\n').map((x) => x.trim()).filter((x) => /^https?:\/\/[\w.-]+(:\d+)?$/.test(x));
+      if (list.length) return list;
+    } catch {}
   }
+  return [];
+}
+// GM-chosen address that browser visitors get forwarded to ('' = off). Only spare addresses are allowed.
+function forwardTo() {
+  const v = getSetting('forward_to') || '';
+  return backupUrls().includes(v) ? v : '';
 }
 
 app.get('/api/config', (_req, res) => {
-  res.json({ appName: config.appName, vapidPublicKey, scamGag: (getSetting('scam_gag') ?? '1') === '1', resetEpoch: getSetting('reset_epoch') || '' });
+  res.json({ appName: config.appName, vapidPublicKey, scamGag: (getSetting('scam_gag') ?? '1') === '1', resetEpoch: getSetting('reset_epoch') || '', forwardTo: forwardTo() });
 });
 
 function noteFailedCode(req: Request) {
@@ -286,6 +296,7 @@ gmRouter.get('/state', (_req, res) => {
   settings.tz = tz();
   settings.auto_approve_min = getSetting('auto_approve_min') || '0';
   settings.honor_system = getSetting('honor_system') ?? '1';
+  settings.forward_to = forwardTo();
   settings.crown_cooldown_min = getSetting('crown_cooldown_min') ?? '15';
   res.json({
     players: db
@@ -324,6 +335,7 @@ gmRouter.get('/state', (_req, res) => {
     tripStarted: getSetting('trip_started') || null,
     baseUrl: `${_req.protocol}://${_req.get('host')}`,
     backupUrl: backupUrl(),
+    backupUrls: backupUrls(),
     doubleUntil: game.doubleRespectUntil(),
     finalAt: getSetting('final_at') || null,
   });
@@ -428,7 +440,7 @@ gmRouter.post('/final', async (_req, res) => res.json({ text: await game.finalSt
 gmRouter.post('/drop', async (_req, res) => res.json({ id: await randomDrop() }));
 
 gmRouter.post('/settings', (req, res) => {
-  const allowed = [...Object.keys(SCHED_DEFAULTS), 'side_max_winners', 'twin_a', 'twin_b', 'scam_gag', 'tz', 'auto_approve_min', 'crown_cooldown_min', 'honor_system'];
+  const allowed = [...Object.keys(SCHED_DEFAULTS), 'side_max_winners', 'twin_a', 'twin_b', 'scam_gag', 'tz', 'auto_approve_min', 'crown_cooldown_min', 'honor_system', 'forward_to'];
   if (req.body.tz) {
     try {
       new Intl.DateTimeFormat('en-GB', { timeZone: String(req.body.tz) });

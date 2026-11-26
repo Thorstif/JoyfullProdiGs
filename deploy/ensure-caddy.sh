@@ -13,10 +13,13 @@ MAIN=$(grep -m1 -oE '^[A-Za-z0-9.-]+' "$CF")
 IP=$(curl -fsS -m 3 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
 HOSTS="$MAIN, www.$MAIN"
 if [[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  BACKUP="${IP//./-}.sslip.io"
-  HOSTS="$HOSTS, $BACKUP"
-  echo "https://$BACKUP" > "$APP/data/backup-url"
-  chown www-data: "$APP/data/backup-url" 2>/dev/null || true
+  # spare names from two independent free wildcard-DNS services, so one being filtered doesn't sink us
+  SPARES="${IP//./-}.sslip.io ${IP//./-}.nip.io"
+  : > "$APP/data/backup-urls.tmp"
+  for h in $SPARES; do HOSTS="$HOSTS, $h"; echo "https://$h" >> "$APP/data/backup-urls.tmp"; done
+  mv "$APP/data/backup-urls.tmp" "$APP/data/backup-urls"
+  head -1 "$APP/data/backup-urls" > "$APP/data/backup-url"
+  chown www-data: "$APP/data/backup-url" "$APP/data/backup-urls" 2>/dev/null || true
 fi
 if [ -f "$APP/data/extra-domains" ]; then
   while read -r h; do
