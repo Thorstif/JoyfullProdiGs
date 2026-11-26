@@ -9,6 +9,7 @@ import { pushToAll, pushToPlayer, saveSubscription, vapidPublicKey } from './pus
 import { randomDrop, resetDropTimer, sched, SCHED_DEFAULTS, startScheduler } from './scheduler.ts';
 import { seedPoolIfEmpty } from './pool.ts';
 import { seedPlayers } from './seedlib.ts';
+import { aliasesOf, applyDefaultAliases, parseAliases } from './aliases.ts';
 import QRCode from 'qrcode';
 
 seedPoolIfEmpty();
@@ -17,6 +18,7 @@ seedPoolIfEmpty();
 if (process.env.SEED_PLAYERS && !(db.prepare('SELECT COUNT(*) n FROM players').get() as { n: number }).n) {
   seedPlayers(process.env.SEED_PLAYERS.split(',').map((x) => x.trim()).filter(Boolean), process.env.GM_CODE || '');
 }
+applyDefaultAliases();
 
 const app = express();
 app.set('trust proxy', 1);
@@ -163,6 +165,7 @@ app.get('/api/me', (req, res) => {
   res.json({
     id: p.id,
     name: p.name,
+    aliases: aliasesOf(p),
     respect: p.respect,
     rank: game.rankOf(p.id),
     players: game.players().length,
@@ -278,7 +281,7 @@ gmRouter.get('/state', (_req, res) => {
   res.json({
     players: db
       .prepare(
-        `SELECT p.id, p.name, p.code, p.is_gm, p.respect, p.joined_at, p.last_seen,
+        `SELECT p.id, p.name, p.code, p.is_gm, p.respect, p.joined_at, p.last_seen, p.aliases,
          (SELECT COUNT(*) FROM push_subs s WHERE s.player_id = p.id) devices
          FROM players p ORDER BY p.id`,
       )
@@ -472,6 +475,7 @@ gmRouter.post('/players/:id/reissue', (req, res) => {
 gmRouter.post('/players/:id', (req, res) => {
   const name = str(req.body.name, 40);
   if (name) db.prepare('UPDATE players SET name = ? WHERE id = ?').run(name, int(req.params.id));
+  if ('aliases' in req.body) db.prepare('UPDATE players SET aliases = ? WHERE id = ?').run(JSON.stringify(parseAliases(req.body.aliases)), int(req.params.id));
   if (req.body.resetLogin) db.prepare('UPDATE players SET token = NULL WHERE id = ?').run(int(req.params.id));
   res.json({ ok: true });
 });

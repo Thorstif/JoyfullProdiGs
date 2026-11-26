@@ -126,6 +126,8 @@ export type Player = {
   is_gm: number;
   respect: number;
   joined_at: string | null;
+  last_seen?: string | null;
+  aliases?: string | null;
 };
 
 export type Mission = {
@@ -147,6 +149,9 @@ try {
 } catch {}
 try {
   db.exec('ALTER TABLE players ADD COLUMN last_seen TEXT');
+} catch {}
+try {
+  db.exec('ALTER TABLE players ADD COLUMN aliases TEXT');
 } catch {}
 
 // Time zone can be changed live from the GM panel (useful once the destination is known)

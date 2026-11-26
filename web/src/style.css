@@ -383,3 +383,31 @@ body.offline::before { content: 'Offline · showing last known'; position: fixed
 .codes td.acts { white-space: nowrap; }
 .qr-title { font-size: 1.05rem; white-space: nowrap; }
 .qr-name { font-size: 1.25rem; overflow-wrap: anywhere; line-height: 1.1; }
+
+/* nametag (occasionally shows the wrong name on purpose) */
+.brand { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.nametag {
+  display: inline-block;
+  max-width: 55vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: #f4f1e8;
+  color: #111;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-top: 4px solid var(--hot);
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 #000;
+  transition: transform 0.2s;
+}
+.nametag.slip { animation: tag-slip 0.35s; transform: rotate(3deg); }
+.nametag.fix { animation: tag-slip 0.3s reverse; }
+@keyframes tag-slip {
+  0% { transform: rotate(-2deg) translateX(0); }
+  30% { transform: rotate(4deg) translateX(-3px); }
+  60% { transform: rotate(-4deg) translateX(3px); }
+  100% { transform: rotate(3deg); }
+}

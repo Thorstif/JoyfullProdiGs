@@ -208,7 +208,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
 
     <section class="card">
       <h3>QR cards</h3>
-      <p class="small muted">One personal QR per player. Open this on the server's real address so the links point there. The look-alikes' cards carry the other one's name on purpose.</p>
+      <p class="small muted">One personal QR per player. Open this on the server's real address so the links point there. Every card carries its owner's own name.</p>
       <button class="btn" id="qr-open">Show printable QR cards</button>
     </section>
 
@@ -221,10 +221,12 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
             (p: any) => `<tr class="${p.devices ? '' : 'warn-row'}"><td>${esc(p.name)}${p.is_gm ? ' ★' : ''}</td><td><code>${esc(p.code)}</code></td><td>${p.devices || '⚠ 0'}</td><td>${p.last_seen ? ago(p.last_seen) : '–'}</td>
             <td class="acts"><button class="link" data-post="/gm/test-push" data-body='{"playerId":${p.id}}'>ping</button>
             <button class="link" data-copy="${esc(s.baseUrl)}/?invite=${encodeURIComponent(p.code)}">link</button>
-            <button class="link" data-post="/gm/players/${p.id}/reissue" data-confirm="1">new code</button></td></tr>`,
+            <button class="link" data-post="/gm/players/${p.id}/reissue" data-confirm="1">new code</button>
+            <button class="link" data-aliases="${p.id}" data-name="${esc(p.name)}" data-cur="${esc(aliasList(p.aliases).join(', '))}">tag</button></td></tr>`,
           )
           .join('')}
       </table>
+      <p class="small muted">"tag" sets the wrong names their nametag now and then slips to.</p>
       <p class="small muted">⚠ 0 phones = no alerts reach them. "link" copies their personal invite to paste in a chat if a card is lost. "new code" if a card leaks: old code and phones stop working.</p>
       <button class="btn small ghost" data-post="/gm/backup">Back up now</button>
     </details>`;
@@ -237,6 +239,20 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       toast(err.message);
     }
   };
+
+  v.querySelectorAll<HTMLElement>('[data-aliases]').forEach((b) => {
+    b.onclick = async () => {
+      const val = prompt(`Wrong names for ${b.dataset.name}'s nametag (comma separated, empty = none):`, b.dataset.cur || '');
+      if (val === null) return;
+      try {
+        await api(`/gm/players/${b.dataset.aliases}`, { method: 'POST', body: { aliases: val }, gm: true });
+        toast('Nametag updated.');
+        refresh();
+      } catch (err: any) {
+        toast(err.message);
+      }
+    };
+  });
 
   v.querySelectorAll<HTMLElement>('[data-copy]').forEach((b) => {
     b.onclick = async () => {
@@ -322,4 +338,12 @@ function showQrSheet(cards: { name: string; url: string; svg: string }[]) {
   document.body.appendChild(el);
   el.querySelector<HTMLElement>('#qr-close')!.onclick = () => el.remove();
   el.querySelector<HTMLElement>('#qr-print')!.onclick = () => window.print();
+}
+
+function aliasList(raw: string | null): string[] {
+  try {
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }

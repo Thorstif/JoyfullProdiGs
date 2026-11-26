@@ -1,3 +1,4 @@
+import { mountNametag, nametagHtml } from './nametag.ts';
 import './style.css';
 import { api, ApiError, store } from './api.ts';
 import { renderGm } from './gm.ts';
@@ -8,6 +9,7 @@ import { esc, ago, $, toast, timeLeft, banner } from './ui.ts';
 type Me = {
   id: number;
   name: string;
+  aliases?: string[];
   respect: number;
   rank: number;
   players: number;
@@ -178,7 +180,7 @@ function shell(active: string) {
   const dbl = me?.doubleUntil ? `<div class="double">2X DOUBLE RESPECT <span data-until="${me.doubleUntil}"></span></div>` : '';
   app.innerHTML = `
     <header class="top">
-      <div class="logo" id="logo">${logoText()}</div>
+      <div class="brand"><div class="logo" id="logo">${logoText()}</div>${me ? nametagHtml(me.name) : ''}</div>
       ${me?.isGm ? `<a class="gm-btn" href="#/gm">GM</a>` : ''}
       <a class="respect" href="#/me"><small>RESPECT</small><b class="${(me?.respect ?? 0) < 0 ? 'neg' : ''}">${me?.respect ?? 0}</b><small>#${me?.rank ?? '-'} of ${me?.players ?? '-'}</small></a>
     </header>
@@ -187,6 +189,7 @@ function shell(active: string) {
     <main id="view"></main>
     <nav class="tabs">${TABS.map(([h, l, i]) => `<a href="${h}" class="${h === active ? 'on' : ''}"><i>${i}</i>${l}</a>`).join('')}</nav>`;
   setupGmGesture();
+  if (me) mountNametag(me.name, me.aliases ?? []);
   tickTimers();
   return $('#view')!;
 }
