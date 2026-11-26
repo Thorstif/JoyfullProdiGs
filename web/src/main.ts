@@ -586,17 +586,7 @@ async function boot(): Promise<void> {
     const twin = () => {
       if (intro?.decoy && !isStandalone && !twinSeen()) {
         report('twin');
-        return twinScreen(app, intro.name, intro.decoy.name, install, async () => {
-          // swapped cards: switch to the other twin's invite, then carry on
-          const other = await api<Intro>(`/intro/${encodeURIComponent(intro!.code)}/twin`, { body: {} }).catch(() => null);
-          if (!other) return install();
-          intro = other;
-          try {
-            localStorage.setItem(INVITE_KEY, other.code);
-          } catch {}
-          report('twin');
-          setTimeout(install, 1200);
-        });
+        return twinScreen(app, intro.name, intro.decoy.name, install);
       }
       install();
     };
