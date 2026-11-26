@@ -125,6 +125,7 @@ export type NewMission = {
   targetPlayerId?: number | null;
   maxWinners?: number;
   expiresInMinutes?: number | null;
+  poolId?: number | null;
 };
 
 const KIND_LABEL: Record<string, string> = {
@@ -138,10 +139,10 @@ export async function createMission(m: NewMission, notify = true) {
   const expires = m.expiresInMinutes ? new Date(Date.now() + m.expiresInMinutes * 60_000).toISOString() : null;
   const res = db
     .prepare(
-      `INSERT INTO missions (kind, title, description, reward, target_player_id, max_winners, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO missions (kind, title, description, reward, target_player_id, max_winners, expires_at, pool_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(m.kind, m.title, m.description || '', m.reward, m.targetPlayerId ?? null, m.maxWinners ?? 0, expires);
+    .run(m.kind, m.title, m.description || '', m.reward, m.targetPlayerId ?? null, m.maxWinners ?? 0, expires, m.poolId ?? null);
   const id = Number(res.lastInsertRowid);
   const label = KIND_LABEL[m.kind] || 'MISSION';
   const timeTxt = m.expiresInMinutes ? ` · ${m.expiresInMinutes} min` : '';

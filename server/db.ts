@@ -153,6 +153,12 @@ try {
 try {
   db.exec('ALTER TABLE players ADD COLUMN aliases TEXT');
 } catch {}
+try {
+  db.exec('ALTER TABLE missions ADD COLUMN pool_id INTEGER');
+} catch {}
+try {
+  db.exec('ALTER TABLE mission_pool ADD COLUMN vetoed INTEGER NOT NULL DEFAULT 0');
+} catch {}
 
 // Time zone can be changed live from the GM panel (useful once the destination is known)
 export function tz() {

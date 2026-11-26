@@ -53,6 +53,20 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
           : `<button class="btn primary wide" data-post="/gm/pause" data-body='{"paused":false}'>▶ Resume autopilot</button>`
     }
 
+    ${(() => {
+      const live = s.missions.filter((m: any) => m.open);
+      return live.length
+        ? `<section class="card"><h3>Live jobs</h3>
+      ${live
+        .map(
+          (m: any) => `<div class="gm-item row"><span class="grow">${esc(m.title)}${m.target_name ? ` <small class="muted">· ${esc(m.target_name)}</small>` : ''}</span>
+          <button class="btn small ghost" data-post="/gm/missions/${m.id}/veto" data-confirm="1">Veto ↻</button></div>`,
+        )
+        .join('')}
+      <p class="small muted">Veto scraps the job, swaps in a new one from the pool, and the vetoed one never comes back.</p></section>`
+        : '';
+    })()}
+
     <section class="card">
       <h3>Quick actions</h3>
       <form class="row" data-api="/gm/double">
@@ -167,7 +181,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       <ul class="pool">${s.pool
         .map(
           (p: any) =>
-            `<li><span class="pill ${p.kind === 'mystery' ? 'pending' : ''}">${p.kind}</span> ${esc(p.title)} <small class="muted">+${p.reward} · used ${p.used}</small> <button class="link" data-delete="/gm/pool/${p.id}">remove</button></li>`,
+            `<li><span class="pill ${p.kind === 'mystery' ? 'pending' : ''}">${p.kind}</span> ${esc(p.title)} <small class="muted">+${p.reward} · used ${p.used}</small> ${p.vetoed ? `<span class="pill closed">vetoed</span> <button class="link" data-post="/gm/pool/${p.id}/restore">restore</button>` : `<button class="link" data-delete="/gm/pool/${p.id}">remove</button>`}</li>`,
         )
         .join('')}</ul>
     </details>
@@ -178,7 +192,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
         .map(
           (m: any) =>
             `<li><span class="pill ${m.open ? 'approved' : 'closed'}">${m.open ? 'open' : 'closed'}</span> ${esc(m.title)} <small class="muted">${m.kind}${m.target_name ? ` · for ${esc(m.target_name)}` : ''} · ${m.winners} paid</small>
-            ${m.open ? `<button class="link" data-post="/gm/missions/${m.id}/close">close</button>` : ''}</li>`,
+            ${m.open ? `<button class="link" data-post="/gm/missions/${m.id}/close">close</button> <button class="link" data-post="/gm/missions/${m.id}/veto" data-confirm="1">veto ↻</button>` : ''}</li>`,
         )
         .join('')}</ul>
     </details>

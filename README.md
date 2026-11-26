@@ -91,6 +91,8 @@ If a player logged in from Safari first, they just enter the code again in the h
 
 ## Game Master guide
 
+- **Veto a mission.** If a job doesn't fit (wrong place, impossible, steals too much focus), GM panel → "Live jobs" → **Veto ↻** (tap twice). The job disappears, pending claims on it are dropped, a fresh one from the pool is pushed in its place (a secret job is swapped for another secret job for the same person), and the vetoed one is banned from the pool for the rest of the trip. Changed your mind? "Mission pool" → restore.
+
 - **Test, then reset.** Play around as much as you like before kickoff, then GM panel → "Reset game (after testing)" → type RESET. It wipes Respect, jobs, claims, bounties, crown, achievements and the feed and sets the game back to not started, but keeps players, codes, logins, phones/alerts, nametags and settings. A backup is taken first, and phones clear their cached data and replay the gags on the next open.
 
 - Open the panel: tap **GM** in the header and enter `GM_PIN`. Other players never see the button, and the API answers 404 to them.

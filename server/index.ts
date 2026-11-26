@@ -6,7 +6,7 @@ import { config } from './config.ts';
 import { backupNow, db, getSetting, setSetting, tz, type Player } from './db.ts';
 import * as game from './game.ts';
 import { pushToAll, pushToPlayer, saveSubscription, vapidPublicKey } from './push.ts';
-import { randomDrop, resetDropTimer, sched, SCHED_DEFAULTS, startScheduler } from './scheduler.ts';
+import { randomDrop, resetDropTimer, sched, SCHED_DEFAULTS, startScheduler, vetoMission } from './scheduler.ts';
 import { seedPoolIfEmpty } from './pool.ts';
 import { seedPlayers } from './seedlib.ts';
 import { aliasesOf, applyDefaultAliases, parseAliases } from './aliases.ts';
@@ -331,6 +331,17 @@ gmRouter.post('/missions', async (req, res) => {
 
 gmRouter.post('/missions/:id/close', (req, res) => {
   db.prepare('UPDATE missions SET closed = 1 WHERE id = ?').run(int(req.params.id));
+  res.json({ ok: true });
+});
+
+gmRouter.post('/missions/:id/veto', async (req, res) => {
+  const newId = await vetoMission(int(req.params.id));
+  const m = newId ? (db.prepare('SELECT title FROM missions WHERE id = ?').get(newId) as { title: string }) : null;
+  res.json({ ok: true, text: m ? `Swapped for: ${m.title}` : 'Scrapped. The pool is empty, so nothing was swapped in.' });
+});
+
+gmRouter.post('/pool/:id/restore', (req, res) => {
+  db.prepare('UPDATE mission_pool SET vetoed = 0 WHERE id = ?').run(int(req.params.id));
   res.json({ ok: true });
 });
 

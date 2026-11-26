@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { config } from './config.ts';
-import { backupNow, db, getSetting, localHour, setSetting, tz } from './db.ts';
-import { createMission, dailyRecap, finalStandings, players, reviewClaim, startGame } from './game.ts';
+import { backupNow, db, getSetting, localHour, setSetting, tz, type Mission } from './db.ts';
+import { createMission, dailyRecap, finalStandings, players, postFeed, reviewClaim, startGame } from './game.ts';
 
 // All scheduler settings live in the settings table so the Game Master can change them live.
 export const SCHED_DEFAULTS: Record<string, string> = {
@@ -31,18 +31,23 @@ function scheduleNextDrop() {
 
 type PoolRow = { id: number; kind: string; title: string; description: string; reward: number; used: number };
 
-export async function randomDrop() {
-  const wantMystery = Math.random() < Number(sched('sched_mystery_chance'));
+// Drop a mission from the pool. Vetoed pool entries never come back.
+// opts.kind/target let a veto swap in a like-for-like replacement; opts.excludePoolId avoids the one just vetoed.
+export async function randomDrop(opts: { kind?: 'side' | 'mystery'; target?: number | null; excludePoolId?: number | null } = {}) {
+  const wantMystery = opts.kind ? opts.kind === 'mystery' : Math.random() < Number(sched('sched_mystery_chance'));
   const kind = wantMystery ? 'mystery' : 'side';
+  const ex = opts.excludePoolId ?? -1;
+  // prefer entries that aren't live right now, then the least used
+  const order = `ORDER BY (SELECT COUNT(*) FROM missions m WHERE m.pool_id = mission_pool.id AND m.closed = 0) ASC, used ASC, RANDOM() LIMIT 1`;
   const pick =
-    (db.prepare('SELECT * FROM mission_pool WHERE kind = ? ORDER BY used ASC, RANDOM() LIMIT 1').get(kind) as PoolRow | undefined) ||
-    (db.prepare('SELECT * FROM mission_pool ORDER BY used ASC, RANDOM() LIMIT 1').get() as PoolRow | undefined);
+    (db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? AND kind = ? ${order}`).get(ex, kind) as PoolRow | undefined) ||
+    (db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? ${order}`).get(ex) as PoolRow | undefined);
   if (!pick) return null;
   db.prepare('UPDATE mission_pool SET used = used + 1 WHERE id = ?').run(pick.id);
   let target: number | null = null;
   if (pick.kind === 'mystery') {
     const ps = players();
-    target = ps[Math.floor(Math.random() * ps.length)]?.id ?? null;
+    target = opts.target ?? ps[Math.floor(Math.random() * ps.length)]?.id ?? null;
   }
   return createMission({
     kind: pick.kind === 'mystery' ? 'mystery' : 'side',
@@ -52,6 +57,23 @@ export async function randomDrop() {
     targetPlayerId: target,
     maxWinners: target ? 1 : Number(getSetting('side_max_winners') || 1),
     expiresInMinutes: Number(sched('sched_side_expiry')),
+    poolId: pick.id,
+  });
+}
+
+// GM veto: kill a live mission, ban its pool entry for good, and swap in a fresh one
+export async function vetoMission(id: number) {
+  const m = db.prepare('SELECT * FROM missions WHERE id = ?').get(id) as (Mission & { pool_id: number | null }) | undefined;
+  if (!m) return null;
+  db.prepare('UPDATE missions SET closed = 1 WHERE id = ?').run(id);
+  db.prepare("UPDATE claims SET status = 'rejected' WHERE mission_id = ? AND status = 'pending'").run(id);
+  if (m.pool_id) db.prepare('UPDATE mission_pool SET vetoed = 1 WHERE id = ?').run(m.pool_id);
+  else db.prepare('UPDATE mission_pool SET vetoed = 1 WHERE title = ?').run(m.title); // GM-made copy of a pool job
+  postFeed('gm', `Scrapped: ${m.title}`, m.target_player_id ?? null);
+  return randomDrop({
+    kind: m.kind === 'mystery' ? 'mystery' : 'side',
+    target: m.kind === 'mystery' ? m.target_player_id : null,
+    excludePoolId: m.pool_id,
   });
 }
 
