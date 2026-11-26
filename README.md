@@ -59,12 +59,12 @@ Fastest path (about 10 minutes, no SSH needed): `deploy/setup.sh` installs every
 2. On DigitalOcean, create an Ubuntu 24.04 droplet and paste this into **Advanced options > Add initialization scripts (free)**, with your values:
    ```bash
    #!/bin/bash
-   export DOMAIN=joyfullprodigs.fun EMAIL=you@yourmail.com GM_PIN=1234 GM_CODE=THOR-1234
+   export DOMAIN=joyfullprodigs.lol EMAIL=you@yourmail.com GM_PIN=1234 GM_CODE=THOR-1234
    export REPO=https://github.com/Thorstif/JoyfullProdiGs.git
    curl -fsSL https://raw.githubusercontent.com/Thorstif/JoyfullProdiGs/main/deploy/setup.sh | bash
    ```
    (This needs the repo to be public. Nothing secret is in it.)
-3. After a few minutes, `https://joyfullprodigs.fun/api/health` answers `{"ok":true,...}`. Setup output is in `/var/log/cloud-init-output.log` on the server.
+3. After a few minutes, `https://joyfullprodigs.lol/api/health` answers `{"ok":true,...}`. Setup output is in `/var/log/cloud-init-output.log` on the server.
 
 Manual alternative on any Ubuntu server: `git clone` the repo, then `sudo DOMAIN=... EMAIL=... REPO=... GM_PIN=... GM_CODE=... bash deploy/setup.sh`.
 
