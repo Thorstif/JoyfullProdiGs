@@ -91,6 +91,8 @@ If a player logged in from Safari first, they just enter the code again in the h
 
 ## Game Master guide
 
+- **Test, then reset.** Play around as much as you like before kickoff, then GM panel → "Reset game (after testing)" → type RESET. It wipes Respect, jobs, claims, bounties, crown, achievements and the feed and sets the game back to not started, but keeps players, codes, logins, phones/alerts, nametags and settings. A backup is taken first, and phones clear their cached data and replay the gags on the next open.
+
 - Open the panel: tap **GM** in the header and enter `GM_PIN`. Other players never see the button, and the API answers 404 to them.
 - **Autopilot starts itself** at `TRIP_START` (Friday 12:00) with a short GAME ON push, and final standings go out at `FINAL_AT` (Sunday 22:00), which also switches autopilot off. Both are in `.env`, and the GM panel can override them. Without them, turn Autopilot on in the panel. It drops a random side mission every 2.5 to 4 hours between 11:00 and 23:00 local time (about 3 a day), with a 15% chance of a secret mystery event for one random player. All of this is adjustable live.
 - The mission pool starts with 23 generic missions (drinking ones included) that work in any city. Add your own once you know the destination.

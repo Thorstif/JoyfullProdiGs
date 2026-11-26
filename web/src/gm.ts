@@ -229,12 +229,31 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       <p class="small muted">"tag" sets the wrong names their nametag now and then slips to.</p>
       <p class="small muted">⚠ 0 phones = no alerts reach them. "link" copies their personal invite to paste in a chat if a card is lost. "new code" if a card leaks: old code and phones stop working.</p>
       <button class="btn small ghost" data-post="/gm/backup">Back up now</button>
+    </details>
+
+    <details class="card">
+      <summary>Reset game (after testing)</summary>
+      <p class="small muted">Wipes Respect, jobs, claims, bounties, crown, achievements and the news feed, and puts the game back to "not started". Keeps players, invite codes, logins, phones and alerts, nametags and settings. A backup is saved first.</p>
+      <button class="btn danger" id="reset-game">Reset game</button>
     </details>`;
 
   document.getElementById('qr-open')!.onclick = async () => {
     try {
       const cards = await api<any[]>('/gm/qr', { gm: true });
       showQrSheet(cards);
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  document.getElementById('reset-game')!.onclick = async () => {
+    const val = prompt('This wipes all scores and events. Type RESET to confirm.');
+    if (val === null) return;
+    try {
+      await api('/gm/reset', { body: { confirm: val.trim().toUpperCase() }, gm: true });
+      for (const k of Object.keys(localStorage)) if (k.startsWith('ww_cache:')) localStorage.removeItem(k);
+      toast('Game reset. Press Start when you kick off.');
+      refresh();
     } catch (err: any) {
       toast(err.message);
     }

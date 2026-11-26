@@ -24,7 +24,7 @@ type Me = {
 };
 
 const app = document.getElementById('app')!;
-let cfg = { appName: 'JoyfullProdiGs', vapidPublicKey: '', scamGag: true };
+let cfg = { appName: 'JoyfullProdiGs', vapidPublicKey: '', scamGag: true, resetEpoch: '' };
 type Intro = { name: string; code: string; scamGag: boolean; decoy: { name: string } | null };
 let intro: Intro | null = null; // set when the app was opened from a personal QR (/?invite=CODE)
 
@@ -573,11 +573,25 @@ document.addEventListener('visibilitychange', () => {
 });
 setInterval(softRefresh, 30_000);
 
+// After the GM resets the game, drop cached data and let the gags play again on this device
+function applyReset(epoch: string) {
+  try {
+    const seen = localStorage.getItem('ww_reset_epoch');
+    if (!epoch || seen === epoch) return;
+    localStorage.setItem('ww_reset_epoch', epoch);
+    if (seen === null && !store.token) return; // brand new device, nothing to clear
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith('ww_cache:') || ['ww_gag_seen', 'ww_twin_seen', 'ww_gag_fell'].includes(k)) localStorage.removeItem(k);
+    }
+  } catch {}
+}
+
 async function boot(): Promise<void> {
   try {
     cfg = await api('/config');
   } catch {}
   document.title = cfg.appName;
+  applyReset(cfg.resetEpoch);
   if (!store.token) {
     const invite = takeInviteFromUrl();
     if (invite) intro = await api<Intro>(`/intro/${encodeURIComponent(invite)}`).catch(() => null);

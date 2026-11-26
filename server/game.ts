@@ -410,3 +410,16 @@ export async function startGame() {
   await worldEvent('GAME ON', 'The weekend has started. Respect is up for grabs.');
   return true;
 }
+
+// Wipe everything that happened in the game (for a clean start after testing).
+// Keeps players, invite codes, logins, phones (push subscriptions), nametags, the mission pool and all settings.
+export function resetGame() {
+  db.transaction(() => {
+    for (const t of ['claims', 'bounties', 'achievements', 'respect_log', 'feed', 'crown_log', 'missions']) db.exec(`DELETE FROM ${t}`);
+    db.exec('UPDATE players SET respect = 0');
+    db.exec('UPDATE mission_pool SET used = 0');
+    db.prepare("DELETE FROM settings WHERE key IN ('trip_started', 'double_until', 'final_at', 'next_drop_at')").run();
+    setSetting('sched_enabled', '0');
+    setSetting('reset_epoch', String(Date.now())); // phones clear their caches and gag flags when this changes
+  })();
+}

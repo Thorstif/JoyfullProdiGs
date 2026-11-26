@@ -79,7 +79,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.get('/api/config', (_req, res) => {
-  res.json({ appName: config.appName, vapidPublicKey, scamGag: (getSetting('scam_gag') ?? '1') === '1' });
+  res.json({ appName: config.appName, vapidPublicKey, scamGag: (getSetting('scam_gag') ?? '1') === '1', resetEpoch: getSetting('reset_epoch') || '' });
 });
 
 function noteFailedCode(req: Request) {
@@ -446,6 +446,14 @@ gmRouter.get('/qr', async (req, res) => {
 
 gmRouter.post('/start', async (_req, res) => {
   res.json({ started: await game.startGame() });
+});
+
+gmRouter.post('/reset', async (req, res) => {
+  if (req.body.confirm !== 'RESET') return void res.status(400).json({ error: 'Type RESET to confirm.' });
+  const file = path.basename(await backupNow()); // safety copy, just in case
+  game.resetGame();
+  resetDropTimer();
+  res.json({ ok: true, backup: file });
 });
 
 gmRouter.post('/pause', (req, res) => {
