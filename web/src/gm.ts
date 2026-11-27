@@ -3,6 +3,13 @@ import { esc, ago, toast, timeLeft } from './ui.ts';
 
 // The hidden Game Master panel. Every form posts its fields to the path in data-api.
 
+// "18-23", "until 3" -> "drops 18–23 · until 03:00"
+function timing(hours: string | null, lasts: string | null) {
+  const h = hours ? `drops ${hours.replace('-', '–')}` : 'any time';
+  const l = !lasts ? 'default length' : lasts.startsWith('until') ? `until ${lasts.slice(6).padStart(2, '0')}:00` : Number(lasts) % 60 ? `${lasts} min` : `${Number(lasts) / 60}h`;
+  return `${h} · ${l}`;
+}
+
 export async function renderGm(v: HTMLElement, refresh: () => void) {
   const s = await api<any>('/gm/state', { gm: true });
   const opts = (blank: string) =>
@@ -192,18 +199,19 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
         <input name="title" placeholder="Title" required />
         <textarea name="description" placeholder="Briefing"></textarea>
         <div class="row"><select name="kind"><option value="side">Side (everyone)</option><option value="mystery">Mystery (one random player)</option></select><input name="reward" type="number" value="30" class="num" /></div>
+        <div class="row"><input name="hours" placeholder="Drops: any, or 18-23" /><input name="lasts" placeholder="Lasts: 90, 3h, until 3" /></div>
         <button class="btn">Add to pool</button>
       </form>
       <details><summary class="small">Paste a list</summary>
       <form class="stack" data-api="/gm/pool/bulk">
-        <textarea name="text" rows="7" required placeholder="One per line:&#10;Tour Guide | Tell a stranger one fake fact. | 30&#10;mystery&#10;Toastmaster | Get someone to toast you. | 50"></textarea>
+        <textarea name="text" rows="7" required placeholder="One per line:&#10;Tour Guide | Tell a stranger one fake fact. | 30&#10;Night Owl | Last one standing. | 40 | 21-23 | until 6&#10;mystery&#10;Toastmaster | Get someone to toast you. | 50"></textarea>
         <div class="row"><select name="kind"><option value="side">Starts as side</option><option value="mystery">Starts as mystery</option></select><button class="btn">Add list</button></div>
-        <small class="muted">Title | Briefing | Respect. A line saying <b>side</b> or <b>mystery</b> switches type. Titles already in the pool are skipped.</small>
+        <small class="muted">Title | Briefing | Respect | drop hours | lasts. The last two are optional (hours like 18-23, lasts like 180, 3h or until 3). A line saying <b>side</b> or <b>mystery</b> switches type. Titles already in the pool are skipped.</small>
       </form></details>
       <ul class="pool">${s.pool
         .map(
           (p: any) =>
-            `<li><span class="pill ${p.kind === 'mystery' ? 'pending' : ''}">${p.kind}</span> ${esc(p.title)} <small class="muted">+${p.reward} · used ${p.used}</small> ${p.vetoed ? `<span class="pill closed">vetoed</span> <button class="link" data-post="/gm/pool/${p.id}/restore">restore</button>` : `<button class="link" data-delete="/gm/pool/${p.id}">remove</button>`}</li>`,
+            `<li><span class="pill ${p.kind === 'mystery' ? 'pending' : ''}">${p.kind}</span> ${esc(p.title)} <small class="muted">+${p.reward} · used ${p.used} · ${esc(timing(p.hours, p.lasts))}</small> <button class="link" data-timing="${p.id}" data-name="${esc(p.title)}" data-cur="${esc(`${p.hours ?? 'any'}, ${p.lasts ?? 'default'}`)}">time</button> ${p.vetoed ? `<span class="pill closed">vetoed</span> <button class="link" data-post="/gm/pool/${p.id}/restore">restore</button>` : `<button class="link" data-delete="/gm/pool/${p.id}">remove</button>`}</li>`,
         )
         .join('')}</ul>
     </details>
@@ -309,6 +317,24 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       toast(err.message);
     }
   };
+
+  v.querySelectorAll<HTMLElement>('[data-timing]').forEach((b) => {
+    b.onclick = async () => {
+      const val = prompt(
+        `${b.dataset.name}\n\nWhen it can drop, and how long it lasts.\nExamples: "18-23, 180"  ·  "21-23, until 6"  ·  "any, 3h"  ·  "any, default"`,
+        b.dataset.cur || '',
+      );
+      if (val === null) return;
+      const [hours, lasts = ''] = val.split(',').map((x) => x.trim());
+      try {
+        await api(`/gm/pool/${b.dataset.timing}/timing`, { method: 'POST', body: { hours, lasts }, gm: true });
+        toast('Timing updated.');
+        refresh();
+      } catch (err: any) {
+        toast(err.message);
+      }
+    };
+  });
 
   v.querySelectorAll<HTMLElement>('[data-aliases]').forEach((b) => {
     b.onclick = async () => {

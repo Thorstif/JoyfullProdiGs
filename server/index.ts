@@ -7,7 +7,7 @@ import { backupNow, db, getSetting, setSetting, tz, type Player } from './db.ts'
 import * as game from './game.ts';
 import { pushToAll, pushToPlayer, saveSubscription, vapidPublicKey } from './push.ts';
 import { randomDrop, resetDropTimer, sched, SCHED_DEFAULTS, startScheduler, vetoMission } from './scheduler.ts';
-import { addPoolText, seedPoolIfEmpty } from './pool.ts';
+import { addPoolText, parseHours, parseLasts, seedPoolIfEmpty, setPoolTiming } from './pool.ts';
 import { seedPlayers } from './seedlib.ts';
 import { aliasesOf, applyDefaultAliases, parseAliases } from './aliases.ts';
 import QRCode from 'qrcode';
@@ -457,12 +457,20 @@ gmRouter.post('/settings', (req, res) => {
 
 gmRouter.post('/pool', (req, res) => {
   const kind = req.body.kind === 'mystery' ? 'mystery' : 'side';
-  db.prepare('INSERT INTO mission_pool (kind, title, description, reward) VALUES (?, ?, ?, ?)').run(
+  db.prepare('INSERT INTO mission_pool (kind, title, description, reward, hours, lasts) VALUES (?, ?, ?, ?, ?, ?)').run(
     kind,
     str(req.body.title, 200),
     str(req.body.description, 1000),
     int(req.body.reward, 25),
+    parseHours(req.body.hours),
+    parseLasts(req.body.lasts),
   );
+  res.json({ ok: true });
+});
+
+// When a template may drop and how long it stays open
+gmRouter.post('/pool/:id/timing', (req, res) => {
+  setPoolTiming(int(req.params.id), req.body.hours, req.body.lasts);
   res.json({ ok: true });
 });
 

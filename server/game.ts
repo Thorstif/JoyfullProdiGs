@@ -1,5 +1,6 @@
 import { config } from './config.ts';
 import { db, getSetting, localHour, setSetting, type Mission, type Player } from './db.ts';
+import { expiryLabel } from './pool.ts';
 import { pushToAll, pushToPlayer } from './push.ts';
 
 const nowIso = () => new Date().toISOString();
@@ -125,6 +126,7 @@ export type NewMission = {
   targetPlayerId?: number | null;
   maxWinners?: number;
   expiresInMinutes?: number | null;
+  expiresAt?: Date | null; // takes precedence over expiresInMinutes
   poolId?: number | null;
 };
 
@@ -136,7 +138,8 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 export async function createMission(m: NewMission, notify = true) {
-  const expires = m.expiresInMinutes ? new Date(Date.now() + m.expiresInMinutes * 60_000).toISOString() : null;
+  const expiresAt = m.expiresAt ?? (m.expiresInMinutes ? new Date(Date.now() + m.expiresInMinutes * 60_000) : null);
+  const expires = expiresAt?.toISOString() ?? null;
   const res = db
     .prepare(
       `INSERT INTO missions (kind, title, description, reward, target_player_id, max_winners, expires_at, pool_id)
@@ -145,7 +148,7 @@ export async function createMission(m: NewMission, notify = true) {
     .run(m.kind, m.title, m.description || '', m.reward, m.targetPlayerId ?? null, m.maxWinners ?? 0, expires, m.poolId ?? null);
   const id = Number(res.lastInsertRowid);
   const label = KIND_LABEL[m.kind] || 'MISSION';
-  const timeTxt = m.expiresInMinutes ? ` · ${m.expiresInMinutes} min` : '';
+  const timeTxt = expiresAt ? ` · ${expiryLabel(expiresAt)}` : '';
   if (m.targetPlayerId) {
     postFeed(m.kind, `${label} for you: ${m.title}`, m.targetPlayerId);
     if (notify)

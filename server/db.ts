@@ -93,7 +93,9 @@ CREATE TABLE IF NOT EXISTS mission_pool (
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   reward INTEGER NOT NULL DEFAULT 25,
-  used INTEGER NOT NULL DEFAULT 0
+  used INTEGER NOT NULL DEFAULT 0,
+  hours TEXT, -- when Autopilot may drop it, e.g. '18-23' (NULL = any time)
+  lasts TEXT  -- minutes, or 'until H' (NULL = Autopilot default)
 );
 -- The Crown: one at a time, anyone can hand it to anyone. Latest row = current holder.
 CREATE TABLE IF NOT EXISTS crown_log (
@@ -162,6 +164,12 @@ try {
 } catch {}
 try {
   db.exec('ALTER TABLE bounties ADD COLUMN settled_at TEXT');
+} catch {}
+try {
+  db.exec('ALTER TABLE mission_pool ADD COLUMN hours TEXT');
+} catch {}
+try {
+  db.exec('ALTER TABLE mission_pool ADD COLUMN lasts TEXT');
 } catch {}
 
 // Time zone can be changed live from the GM panel (useful once the destination is known)
