@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS bounties (
   status TEXT NOT NULL DEFAULT 'open',
   claimant_id INTEGER REFERENCES players(id) ON DELETE SET NULL,
   claim_note TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  settled_at TEXT
 );
 CREATE TABLE IF NOT EXISTS achievements (
   id INTEGER PRIMARY KEY,
@@ -158,6 +159,9 @@ try {
 } catch {}
 try {
   db.exec('ALTER TABLE mission_pool ADD COLUMN vetoed INTEGER NOT NULL DEFAULT 0');
+} catch {}
+try {
+  db.exec('ALTER TABLE bounties ADD COLUMN settled_at TEXT');
 } catch {}
 
 // Time zone can be changed live from the GM panel (useful once the destination is known)

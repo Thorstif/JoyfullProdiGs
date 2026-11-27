@@ -252,9 +252,11 @@ export async function revokeClaim(claimId: number) {
 
 export async function createBounty(issuerId: number, title: string, stake: number, targetId: number | null) {
   const issuer = getPlayer(issuerId)!;
-  if (stake < 5) throw new Error('Minimum stake is 5 Respect');
+  if (!Number.isInteger(stake) || stake < 1) throw new Error('Stake must be at least 1 Respect');
+  // Respect already promised to your other open bounties can't be staked twice
   const held = (db.prepare("SELECT COALESCE(SUM(stake),0) s FROM bounties WHERE issuer_id = ? AND status IN ('open','claimed')").get(issuerId) as { s: number }).s;
-  if (issuer.respect - held < stake) throw new Error(`You only have ${issuer.respect - held} Respect free to stake`);
+  const free = Math.max(0, issuer.respect - held);
+  if (stake > free) throw new Error(`You only have ${free} Respect free to stake`);
   if (targetId === issuerId) throw new Error('You cannot put a bounty on yourself');
   const res = db.prepare('INSERT INTO bounties (issuer_id, target_id, title, stake) VALUES (?, ?, ?, ?)').run(issuerId, targetId, title, stake);
   const target = targetId ? getPlayer(targetId) : null;
@@ -274,7 +276,7 @@ export async function claimBounty(playerId: number, bountyId: number, note: stri
   if (b.target_id && b.target_id !== playerId) throw new Error('This bounty is for someone else');
   db.prepare("UPDATE bounties SET status = 'claimed', claimant_id = ?, claim_note = ? WHERE id = ?").run(playerId, note, bountyId);
   const p = getPlayer(playerId)!;
-  await pushToPlayer(b.issuer_id, { title: 'BOUNTY CLAIMED', body: `${p.name}: ${b.title}`, url: '/#/bounties' });
+  await pushToPlayer(b.issuer_id, { title: 'BOUNTY CLAIMED', body: `${p.name}: ${b.title}${note ? ` · “${note}”` : ''}`, url: '/#/bounties' });
 }
 
 export async function settleBounty(issuerId: number, bountyId: number, pay: boolean, asGm = false) {
@@ -287,20 +289,25 @@ export async function settleBounty(issuerId: number, bountyId: number, pay: bool
     await pushToPlayer(b.claimant_id, { title: 'BOUNTY DENIED', body: b.title, url: '/#/bounties' });
     return;
   }
-  db.prepare("UPDATE bounties SET status = 'paid' WHERE id = ?").run(bountyId);
   const issuer = getPlayer(b.issuer_id)!;
   const hunter = getPlayer(b.claimant_id)!;
-  await addRespect(issuer.id, -b.stake, `Paid bounty: ${b.title}`);
-  await addRespect(hunter.id, b.stake, `Bounty from ${issuer.name}: ${b.title}`);
-  postFeed('bounty', `${hunter.name} collected ${b.stake} Respect from ${issuer.name}: ${b.title}`);
-  await pushToPlayer(hunter.id, { title: 'BOUNTY PAID', body: `+${b.stake} from ${issuer.name}`, url: '/#/' });
+  // The issuer's Respect may have dropped since posting. Pay what they have, never below zero.
+  const amount = Math.min(b.stake, Math.max(0, issuer.respect));
+  const short = amount < b.stake ? ` (all ${issuer.name} had left of ${b.stake})` : '';
+  db.prepare("UPDATE bounties SET status = 'paid', stake = ?, settled_at = ? WHERE id = ?").run(amount, new Date().toISOString(), bountyId);
+  if (amount > 0) {
+    await addRespect(issuer.id, -amount, `Paid bounty: ${b.title}`);
+    await addRespect(hunter.id, amount, `Bounty from ${issuer.name}: ${b.title}`);
+  }
+  postFeed('bounty', `${hunter.name} collected ${amount} Respect${short} from ${issuer.name}: ${b.title}`);
+  await pushToPlayer(hunter.id, { title: 'BOUNTY PAID', body: `+${amount}${short} from ${issuer.name}`, url: '/#/' });
   await grantAchievement(hunter.id, 'bounty_hunter');
 }
 
 export function cancelBounty(issuerId: number, bountyId: number, asGm = false) {
   const b = db.prepare('SELECT * FROM bounties WHERE id = ?').get(bountyId) as Bounty | undefined;
   if (!b || (!asGm && b.issuer_id !== issuerId) || b.status !== 'open') throw new Error('Cannot cancel');
-  db.prepare("UPDATE bounties SET status = 'cancelled' WHERE id = ?").run(bountyId);
+  db.prepare("UPDATE bounties SET status = 'cancelled', settled_at = ? WHERE id = ?").run(new Date().toISOString(), bountyId);
 }
 
 export function listBounties() {
@@ -310,9 +317,10 @@ export function listBounties() {
        FROM bounties b JOIN players i ON i.id = b.issuer_id
        LEFT JOIN players t ON t.id = b.target_id
        LEFT JOIN players c ON c.id = b.claimant_id
-       WHERE b.status IN ('open','claimed') OR b.created_at > ?
+       WHERE b.status IN ('open','claimed') OR COALESCE(b.settled_at, b.created_at) > ?
        ORDER BY CASE b.status WHEN 'claimed' THEN 0 WHEN 'open' THEN 1 ELSE 2 END, b.id DESC`,
     )
+    // Paid and withdrawn bounties stay visible for 24h after they were settled
     .all(new Date(Date.now() - 24 * 3600_000).toISOString());
 }
 

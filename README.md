@@ -15,7 +15,7 @@ Original theme and art. No Rockstar names, fonts or assets are used.
 | Missions | GM creates them, or Autopilot drops random side missions from a pool. Players tap **Done ✓** and Respect lands instantly (honor system); it shows in News so the group can call out cheaters, and the GM can **Undo** any completion. Switch "Honor system" off in GM settings to approve each claim yourself. Optional timer and "first N win". |
 | Mystery events | Secret missions only one player can see. Autopilot picks a random player. |
 | World events | GM broadcast to everyone. |
-| Bounties | Any player stakes their own Respect on a challenge, for anyone or a named player. The issuer confirms and pays. GM can overrule. |
+| Bounties | Any player stakes any amount of their own Respect (1 up to everything not already staked) on a challenge, for anyone or a named player. The claimer can add a short proof note. The issuer confirms and pays, or denies. If the issuer has less Respect left than the stake by the time they pay, the hunter gets whatever is left (never below zero). GM can overrule. |
 | Achievements | 11 built in (First Job, Hustler, Bounty Hunter, Night Shift, Kingpin, ...) plus custom ones the GM awards. |
 | Double Respect | GM starts a 2x window. Claims made during it pay double. |
 | Daily recap | Push every morning (default 09:00) with yesterday's MVP and standings. |
