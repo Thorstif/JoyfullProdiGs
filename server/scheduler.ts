@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { config } from './config.ts';
 import { backupNow, db, getSetting, localHour, setSetting, tz, type Mission } from './db.ts';
 import { createMission, dailyRecap, finalStandings, players, postFeed, reviewClaim, startGame } from './game.ts';
+import { expiryFor, inWindow } from './pool.ts';
 
 // All scheduler settings live in the settings table so the Game Master can change them live.
 export const SCHED_DEFAULTS: Record<string, string> = {
@@ -29,7 +30,7 @@ function scheduleNextDrop() {
   setSetting('next_drop_at', new Date(Date.now() + gap * 60_000).toISOString());
 }
 
-type PoolRow = { id: number; kind: string; title: string; description: string; reward: number; used: number };
+type PoolRow = { id: number; kind: string; title: string; description: string; reward: number; used: number; hours: string | null; lasts: string | null };
 
 // Drop a mission from the pool. Vetoed pool entries never come back.
 // opts.kind/target let a veto swap in a like-for-like replacement; opts.excludePoolId avoids the one just vetoed.
@@ -37,11 +38,12 @@ export async function randomDrop(opts: { kind?: 'side' | 'mystery'; target?: num
   const wantMystery = opts.kind ? opts.kind === 'mystery' : Math.random() < Number(sched('sched_mystery_chance'));
   const kind = wantMystery ? 'mystery' : 'side';
   const ex = opts.excludePoolId ?? -1;
-  // prefer entries that aren't live right now, then the least used
-  const order = `ORDER BY (SELECT COUNT(*) FROM missions m WHERE m.pool_id = mission_pool.id AND m.closed = 0) ASC, used ASC, RANDOM() LIMIT 1`;
+  // only templates whose drop hours include now; prefer ones that aren't live right now, then the least used
+  const order = `ORDER BY (SELECT COUNT(*) FROM missions m WHERE m.pool_id = mission_pool.id AND m.closed = 0) ASC, used ASC, RANDOM()`;
+  const first = (rows: PoolRow[]) => rows.find((r) => inWindow(r.hours));
   const pick =
-    (db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? AND kind = ? ${order}`).get(ex, kind) as PoolRow | undefined) ||
-    (db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? ${order}`).get(ex) as PoolRow | undefined);
+    first(db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? AND kind = ? ${order}`).all(ex, kind) as PoolRow[]) ||
+    first(db.prepare(`SELECT * FROM mission_pool WHERE vetoed = 0 AND id != ? ${order}`).all(ex) as PoolRow[]);
   if (!pick) return null;
   db.prepare('UPDATE mission_pool SET used = used + 1 WHERE id = ?').run(pick.id);
   let target: number | null = null;
@@ -56,7 +58,7 @@ export async function randomDrop(opts: { kind?: 'side' | 'mystery'; target?: num
     reward: pick.reward,
     targetPlayerId: target,
     maxWinners: target ? 1 : Number(getSetting('side_max_winners') || 1),
-    expiresInMinutes: Number(sched('sched_side_expiry')),
+    expiresAt: expiryFor(pick.lasts, Number(sched('sched_side_expiry'))),
     poolId: pick.id,
   });
 }
