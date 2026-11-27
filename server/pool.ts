@@ -1,6 +1,6 @@
 import { db, getSetting, setSetting } from './db.ts';
 
-// Batch 2, added mid-trip. Kept separate so it can be topped up into an existing pool once.
+// Batch 2, added during the trip. Kept separate so it can be topped up into an existing pool once.
 const SIDE_2: [string, string, number][] = [
   ['Tour Guide', 'Tell a stranger one fake fact about this town.', 30],
   ['Paparazzi', 'Photo of a crew member mid-sip, unnoticed.', 25],
@@ -12,13 +12,28 @@ const SIDE_2: [string, string, number][] = [
   ['Arm Wrestle', 'Challenge a crew member. Loser buys.', 30],
   ['DJ Request', 'Get the venue to play a song you picked.', 40],
   ['Rush Hour', 'Get the crew from bar to bar in under 10 minutes.', 30],
-  ['Napkin Signature', 'Get a staff member\'s autograph.', 30],
+  ['Napkin Signature', 'Get a staff member\'s autograph.', 30],  ['Matchmaker', 'Get two strangers to clink glasses with each other.', 40],
+  ['Street Performer', 'Earn a coin from a stranger. Any talent.', 50],
+  ['Menu Roulette', 'Point at the menu blind. Eat or drink it.', 30],
+  ['Historian', 'Find out the age of the bar you\'re in.', 25],
+  ['Photobomb', 'Get into a stranger\'s group photo. With permission.', 30],
+  ['Tab Detective', 'Find the oldest person in the bar. Toast them.', 35],
+  ['Card Shark', 'Teach a stranger a card or drinking game.', 40],
+  ['Speech!', 'Give a 30-second toast to the crew. No notes.', 30],
+  ['Night Owl', 'Be the last of the crew standing tonight.', 40],
+  ['Early Bird', 'First one up tomorrow. Proof with a photo of the sleepers.', 35],
+  ['Local Dish', 'Eat something you can\'t pronounce.', 30],
 ];
 const MYSTERY_2: [string, string, number][] = [
   ['Word Smuggler', 'Slip "banana republic" into a conversation twice.', 45],
   ['The Plant', 'Get a stranger to call a player by the wrong name.', 55],
   ['Toastmaster', 'Get someone else to propose a toast to you.', 50],
-  ['Sleeper Cell', 'Start a crew-wide slow clap. Don\'t lead it.', 50],
+  ['Sleeper Cell', 'Start a crew-wide slow clap. Don\'t lead it.', 50],  ['Echo', 'Repeat the last word someone says, 5 times. Undetected.', 45],
+  ['Fake Birthday', 'Get staff to sing to a crew member.', 60],
+  ['Name Drop', 'Get a stranger to say Christoffer\'s name.', 50],
+  ['Puppet Master', 'Get Simen to order what you whisper. Secretly.', 55],
+  ['Body Double', 'Get a stranger to wear your jacket for a photo.', 45],
+  ['Wingman', 'Get a stranger to compliment Nikolai.', 50],
 ];
 
 // Starter templates for random drops. Written to work anywhere, since the destination is unknown.
