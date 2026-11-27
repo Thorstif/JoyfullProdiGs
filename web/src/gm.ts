@@ -194,6 +194,12 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
         <div class="row"><select name="kind"><option value="side">Side (everyone)</option><option value="mystery">Mystery (one random player)</option></select><input name="reward" type="number" value="30" class="num" /></div>
         <button class="btn">Add to pool</button>
       </form>
+      <details><summary class="small">Paste a list</summary>
+      <form class="stack" data-api="/gm/pool/bulk">
+        <textarea name="text" rows="7" required placeholder="One per line:&#10;Tour Guide | Tell a stranger one fake fact. | 30&#10;mystery&#10;Toastmaster | Get someone to toast you. | 50"></textarea>
+        <div class="row"><select name="kind"><option value="side">Starts as side</option><option value="mystery">Starts as mystery</option></select><button class="btn">Add list</button></div>
+        <small class="muted">Title | Briefing | Respect. A line saying <b>side</b> or <b>mystery</b> switches type. Titles already in the pool are skipped.</small>
+      </form></details>
       <ul class="pool">${s.pool
         .map(
           (p: any) =>
@@ -342,7 +348,7 @@ export async function renderGm(v: HTMLElement, refresh: () => void) {
       });
       try {
         const r = await api<any>(f.dataset.api!, { body, gm: true });
-        toast(r && typeof r.sent === 'number' ? `Sent to ${r.sent} phone(s)${r.failed ? `, ${r.failed} failed` : ''}.` : 'Done.');
+        toast(r && typeof r.sent === 'number' ? `Sent to ${r.sent} phone(s)${r.failed ? `, ${r.failed} failed` : ''}.` : r?.message || 'Done.');
         refresh();
       } catch (err: any) {
         toast(err.message);
