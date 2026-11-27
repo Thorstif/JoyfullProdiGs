@@ -341,7 +341,7 @@ async function bountiesView() {
     let actions = '';
     if (b.status === 'open' && mine) actions = `<button class="btn small ghost" data-cancel="${b.id}">Withdraw</button>`;
     else if (b.status === 'open' && forMe)
-      actions = `<form class="bclaim" data-id="${b.id}"><button class="btn small primary">Done ✓ claim it</button></form>`;
+      actions = `<form class="bclaim row" data-id="${b.id}"><input name="note" placeholder="Proof (optional)" maxlength="200" /><button class="btn small primary">Done ✓ claim it</button></form>`;
     else if (b.status === 'claimed' && mine)
       actions = `<p>${esc(b.claimant_name)} claims it${b.claim_note ? `: “${esc(b.claim_note)}”` : ''}</p>
         <div class="row"><button class="btn small primary" data-pay="${b.id}">Pay up</button><button class="btn small ghost" data-deny="${b.id}">Deny</button></div>`;
@@ -359,9 +359,9 @@ async function bountiesView() {
       <input name="title" placeholder="e.g. Order in a pirate voice" required maxlength="200" />
       <div class="row">
         <select name="targetId"><option value="">Anyone can take it</option>${others.map((p) => `<option value="${p.id}">Only ${esc(p.name)}</option>`).join('')}</select>
-        <input name="stake" type="number" min="5" step="5" value="20" class="num" />
+        <input name="stake" type="number" min="1" step="1" value="20" inputmode="numeric" class="num" />
       </div>
-      <small class="muted">Paid from your own Respect.</small>
+      <small class="muted">Paid from your own Respect. Any amount, up to all of it.</small>
       <button class="btn primary">Post</button>
     </form></details>
     <h2>Bounties</h2>

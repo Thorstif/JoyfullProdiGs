@@ -257,7 +257,7 @@ app.post('/api/bounties', async (req, res) => {
 });
 
 app.post('/api/bounties/:id/claim', async (req, res) => {
-  await game.claimBounty(req.player!.id, int(req.params.id), str(req.body.note));
+  await game.claimBounty(req.player!.id, int(req.params.id), str(req.body.note, 200));
   res.json({ ok: true });
 });
 
