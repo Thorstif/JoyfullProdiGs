@@ -22,7 +22,17 @@ const SIDE_2: [string, string, number][] = [
   ['Speech!', 'Give a 30-second toast to the crew. No notes.', 30],
   ['Night Owl', 'Be the last of the crew standing tonight.', 40],
   ['Early Bird', 'First one up tomorrow. Proof with a photo of the sleepers.', 35],
-  ['Local Dish', 'Eat something you can\'t pronounce.', 30],
+  ['Local Dish', 'Eat something you can\'t pronounce.', 30],  // Prague
+  ['Na zdraví!', 'Lead a toast with "Na zdraví". Eye contact required.', 25],
+  ['Pilsner Pilgrim', 'Drink a tank Pilsner (tankové pivo).', 25],
+  ['Mlíko', 'Order a "mlíko" pour of beer. Down it.', 35],
+  ['Beer Coaster', 'Steal-proof: get a coaster signed by the bartender.', 30],
+  ['Becherovka Round', 'Buy the crew a round of Becherovka.', 40],
+  ['Trdelník Test', 'Eat a trdelník. Rate it: tourist trap or legit.', 20],
+  ['Smažák', 'Eat fried cheese (smažený sýr) after midnight.', 30],
+  ['Charles Bridge', 'Crew photo on Charles Bridge. Touch the lucky statue.', 40],
+  ['Clock Watch', 'Be at the Astronomical Clock when it strikes the hour.', 35],
+  ['Děkuji', 'Thank 5 staff in Czech tonight.', 25],
 ];
 const MYSTERY_2: [string, string, number][] = [
   ['Word Smuggler', 'Slip "banana republic" into a conversation twice.', 45],
@@ -33,10 +43,14 @@ const MYSTERY_2: [string, string, number][] = [
   ['Name Drop', 'Get a stranger to say Christoffer\'s name.', 50],
   ['Puppet Master', 'Get Simen to order what you whisper. Secretly.', 55],
   ['Body Double', 'Get a stranger to wear your jacket for a photo.', 45],
-  ['Wingman', 'Get a stranger to compliment Nikolai.', 50],
+  ['Wingman', 'Get a stranger to compliment Nikolai.', 50],  // Prague
+  ['Czech Mate', 'Get a local to teach the crew one Czech swear word.', 50],
+  ['Pivo Whisper', 'Order beer for a crew member in Czech. They didn\'t ask.', 45],
+  ['Dumpling Diplomat', 'Get a stranger to recommend a pub. Crew goes there.', 50],
+  ['Bohemian Rhapsody', 'Get a bar to play Queen. Bohemia counts.', 50],
 ];
 
-// Starter templates for random drops. Written to work anywhere, since the destination is unknown.
+// Starter templates for random drops. The first lists work anywhere; batch 2 adds trip ideas and Prague ones.
 // The Game Master can add or delete templates from the panel during the trip.
 const SIDE: [string, string, number][] = [
   ['Street Portrait', 'Photo with a stranger in sunglasses.', 30],
