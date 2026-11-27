@@ -80,3 +80,67 @@ function topUp(key: string, side: Template[], mystery: Template[]) {
     setSetting(key, '1');
   })();
 }
+
+// ---------- bulk add from the GM panel ----------
+// Paste one mission per line, in either format:
+//   Title | Briefing | 30                     (reward optional, defaults to 30)
+//   ['Title', 'Briefing', 30],                (same shape as the lists above)
+// A line that says "side" or "mystery" on its own, or a comment like "// add to MYSTERY",
+// switches the kind for the lines below it. Blank lines are ignored.
+
+type Parsed = { kind: 'side' | 'mystery'; title: string; description: string; reward: number };
+
+const JS_ROW = /^\[\s*(['"])((?:\\.|(?!\1).)*)\1\s*,\s*(['"])((?:\\.|(?!\3).)*)\3\s*,\s*(\d+)\s*\]\s*,?$/;
+const unescape = (s: string) => s.replace(/\\(.)/g, '$1');
+
+export function parsePoolText(text: string, kind: 'side' | 'mystery'): { rows: Parsed[]; errors: string[] } {
+  const rows: Parsed[] = [];
+  const errors: string[] = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) return;
+    if (/^(\/\/|#)/.test(line) || /^(side|mystery)\b[\s:]*$/i.test(line)) {
+      if (/mystery/i.test(line)) kind = 'mystery';
+      else if (/side/i.test(line)) kind = 'side';
+      return;
+    }
+    let title: string, description: string, reward: number;
+    const js = line.match(JS_ROW);
+    if (js) {
+      [title, description, reward] = [unescape(js[2]), unescape(js[4]), Number(js[5])];
+    } else if (line.includes('|')) {
+      const parts = line.split('|').map((p) => p.trim());
+      if (parts.length > 3 || (parts[2] && !/^\d+$/.test(parts[2]))) return void errors.push(`line ${i + 1}: use Title | Briefing | 30`);
+      [title, description, reward] = [parts[0], parts[1] ?? '', parts[2] ? Number(parts[2]) : 30];
+    } else {
+      return void errors.push(`line ${i + 1}: not a mission`);
+    }
+    if (!title) return void errors.push(`line ${i + 1}: missing title`);
+    if (reward < 1 || reward > 1000) return void errors.push(`line ${i + 1}: reward must be 1-1000`);
+    rows.push({ kind, title: title.slice(0, 200), description: description.slice(0, 1000), reward });
+  });
+  return { rows, errors };
+}
+
+// All or nothing: if any line is wrong, nothing is added, so the GM can fix the paste and retry.
+export function addPoolText(text: string, kind: 'side' | 'mystery') {
+  const { rows, errors } = parsePoolText(text, kind);
+  if (errors.length) throw new Error(`Nothing added. ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? ` (+${errors.length - 3} more)` : ''}`);
+  if (!rows.length) throw new Error('Nothing to add');
+  const has = db.prepare('SELECT 1 FROM mission_pool WHERE title = ?');
+  const stmt = ins();
+  const skipped: string[] = [];
+  let side = 0;
+  let mystery = 0;
+  db.transaction(() => {
+    for (const r of rows) {
+      if (has.get(r.title)) {
+        skipped.push(r.title);
+        continue;
+      }
+      stmt.run(r.kind, r.title, r.description, r.reward);
+      r.kind === 'side' ? side++ : mystery++;
+    }
+  })();
+  return { side, mystery, skipped };
+}

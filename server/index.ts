@@ -7,7 +7,7 @@ import { backupNow, db, getSetting, setSetting, tz, type Player } from './db.ts'
 import * as game from './game.ts';
 import { pushToAll, pushToPlayer, saveSubscription, vapidPublicKey } from './push.ts';
 import { randomDrop, resetDropTimer, sched, SCHED_DEFAULTS, startScheduler, vetoMission } from './scheduler.ts';
-import { seedPoolIfEmpty } from './pool.ts';
+import { addPoolText, seedPoolIfEmpty } from './pool.ts';
 import { seedPlayers } from './seedlib.ts';
 import { aliasesOf, applyDefaultAliases, parseAliases } from './aliases.ts';
 import QRCode from 'qrcode';
@@ -464,6 +464,13 @@ gmRouter.post('/pool', (req, res) => {
     int(req.body.reward, 25),
   );
   res.json({ ok: true });
+});
+
+// Bulk add: paste a list, one mission per line (formats in server/pool.ts)
+gmRouter.post('/pool/bulk', (req, res) => {
+  const r = addPoolText(str(req.body.text, 50_000), req.body.kind === 'mystery' ? 'mystery' : 'side');
+  const parts = [r.side && `${r.side} side`, r.mystery && `${r.mystery} mystery`].filter(Boolean).join(' + ') || 'nothing new';
+  res.json({ ...r, message: `Added ${parts}.${r.skipped.length ? ` Skipped ${r.skipped.length} already in the pool.` : ''}` });
 });
 
 gmRouter.delete('/pool/:id', (req, res) => {
